@@ -8,7 +8,7 @@
 //   const handleLogin = (e) => {
 //     e.preventDefault();
 
-//     if (password === "ppL@dmin1417") {
+//     if (password === "*********") {
 //       setIsAdmin(true);
 //       alert("Admin logged in successfully!");
 //       navigate("/registration");
@@ -52,7 +52,7 @@ export default function AdminLogin({ setIsAdmin }) {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (password === "ppl@dmin1417") {
+    if (password === "********") {
       setIsAdmin(true);
       navigate("/registration");
     } else {

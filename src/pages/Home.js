@@ -1,5 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import TeamReveal from "../components/TeamReveal";
+import { AboutPpl } from "./AboutPpl";
 
 export default function Home() {
   const currentYear = new Date().getFullYear();
@@ -64,7 +66,7 @@ export default function Home() {
 
       {/* Title */}
       <h1
-        className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-6 
+        className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-64 mb-6 
         drop-shadow-[0_4px_8px_rgba(0,0,0,0.7)]"
       >
         Welcome to Pundag Premier League 🏏
@@ -106,6 +108,11 @@ export default function Home() {
           Registration Opening Soon
         </button>
       )}
+
+      <div className="mt-[25rem]">
+        <AboutPpl />
+      </div>
+
     </div>
   );
 }

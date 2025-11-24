@@ -754,22 +754,22 @@ export default function RegistrationForm({ isAdmin }) {
   );
 
   // Also fetch pendingPlayers to block duplicate registrations
-  const pendingSnapshot = await getDocs(collection(db, "pendingPlayers"));
-  const pendingPlayers = pendingSnapshot.docs.map((doc) => doc.data());
+  // const pendingSnapshot = await getDocs(collection(db, "pendingPlayers"));
+  // const pendingPlayers = pendingSnapshot.docs.map((doc) => doc.data());
 
-  const mobilePending = pendingPlayers.some(
-    (p) => p.mnumber === formData.mnumber
-  );
+  // const mobilePending = pendingPlayers.some(
+  //   (p) => p.mnumber === formData.mnumber
+  // );
 
-  const upiPending = pendingPlayers.some(
-    (p) => p.upiRefNo === formData.upiRefNo
-  );
+  // const upiPending = pendingPlayers.some(
+  //   (p) => p.upiRefNo === formData.upiRefNo
+  // );
 
-  const aadhaarPending = pendingPlayers.some(
-    (p) => p.aadhaar === formData.aadhaar
-  );
+  // const aadhaarPending = pendingPlayers.some(
+  //   (p) => p.aadhaar === formData.aadhaar
+  // );
 
-  if (mobileExists || upiExists || mobilePending || upiPending || aadhaarPending || aadhaarExists) {
+  if (mobileExists || upiExists || aadhaarExists) {
     setSubmitMessage("❗ User already registered!");
     setTimeout(() => setSubmitMessage(""), 2500);
     return; // 🚫 STOP — NO SUBMIT
@@ -812,7 +812,7 @@ export default function RegistrationForm({ isAdmin }) {
     setTimeout(() => setSubmitMessage(""), 2500);
   } catch (err) {
     console.error(err);
-    setSubmitMessage("❌ Error submitting registration. Try again.");
+    setSubmitMessage("❌ Error submitting registration. Please check the rule above & Try again.");
   }
 };
 

@@ -103,6 +103,13 @@ export default function Header({ isAdmin, setIsAdmin }) {
             Home
           </Link>
           <Link
+            to="/about"
+            className="hover:text-yellow-400 transition"
+            onClick={() => setMenuOpen(false)}
+          >
+            About
+          </Link>
+          <Link
             to="/team-reveal"
             className="hover:text-yellow-400 transition"
             onClick={() => setMenuOpen(false)}

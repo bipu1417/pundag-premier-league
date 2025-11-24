@@ -11,6 +11,7 @@ import bgImage from "./assets/ppl.jpg";
 import PendingApproval from './components/PendingApproval';
 import PaymentPage from './components/PaymentPage';
 import PendingPlayerDetails from "./pages/PendingPlayerDetails";
+import { AboutPpl } from "./pages/AboutPpl";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -35,6 +36,7 @@ function App() {
             <Route path="/team-reveal" element={<TeamReveal />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
             <Route path="/payment" element={<PaymentPage />} />
+            <Route path="/about" element={<AboutPpl />} />
             <Route path="/pending-player/:id" element={<PendingPlayerDetails />} />
             <Route path="/admin-login" element={<AdminLogin setIsAdmin={setIsAdmin} />} />
             <Route path="/player/:id" element={<PlayerDetails />} />

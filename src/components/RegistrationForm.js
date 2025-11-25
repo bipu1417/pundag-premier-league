@@ -725,7 +725,83 @@ export default function RegistrationForm({ isAdmin }) {
     }
   };
 
-  const handleSubmit = async (e) => {
+//   const handleSubmit = async (e) => {
+//   e.preventDefault();
+
+//   if (
+//     !formData.name ||
+//     !formData.age ||
+//     !formData.playerType ||
+//     !formData.mnumber ||
+//     !formData.upiRefNo
+//   ) {
+//     setSubmitMessage("❗ Please fill all required fields including payment!");
+//     return;
+//   }
+
+//   // --------- 🔍 CHECK DUPLICATE ENTRY (FRONTEND ONLY) ----------
+//   // Check inside already fetched players (approved)
+//   const mobileExists = players.some(
+//     (p) => p.mnumber === formData.mnumber
+//   );
+
+//   const upiExists = players.some(
+//     (p) => p.upiRefNo === formData.upiRefNo
+//   );
+
+//   const aadhaarExists = players.some(
+//     (p) => p.aadhaar === formData.aadhaar
+//   );
+
+//   if (mobileExists || upiExists || aadhaarExists) {
+//     setSubmitMessage("❗ User already registered!");
+//     setTimeout(() => setSubmitMessage(""), 2500);
+//     return; // 🚫 STOP — NO SUBMIT
+//   }
+//   // ---------------------------------------------------------------
+
+//   try {
+//     let photoBase64 = "";
+//     let paymentScreenshotBase64 = "";
+
+//     if (formData.photo) photoBase64 = await toBase64(formData.photo);
+//     if (formData.paymentScreenshot)
+//       paymentScreenshotBase64 = await toBase64(formData.paymentScreenshot);
+
+//     await addDoc(collection(db, "pendingPlayers"), {
+//       ...formData,
+//       photo: photoBase64,
+//       paymentScreenshot: paymentScreenshotBase64,
+//       approved: false,
+//       paymentStatus: "pending",
+//       timestamp: new Date(),
+//     });
+
+//     setSubmitMessage(
+//       "✅ Registration submitted! Please wait for admin approval."
+//     );
+
+//     setFormData({
+//       name: "",
+//       age: "",
+//       playerType: "",
+//       mnumber: "",
+//       aadhaar: "",
+//       address: "",
+//       photo: null,
+//       paymentScreenshot: null,
+//       upiRefNo: "",
+//     });
+
+//     setTimeout(() => setSubmitMessage(""), 2500);
+//   } catch (err) {
+//     console.error(err);
+//     setSubmitMessage("❌ Error submitting registration. Please check the rule above & Try again.");
+//   }
+// };
+
+
+const handleSubmit = async (e) => {
   e.preventDefault();
 
   if (
@@ -739,44 +815,41 @@ export default function RegistrationForm({ isAdmin }) {
     return;
   }
 
-  // --------- 🔍 CHECK DUPLICATE ENTRY (FRONTEND ONLY) ----------
-  // Check inside already fetched players (approved)
-  const mobileExists = players.some(
-    (p) => p.mnumber === formData.mnumber
-  );
-
-  const upiExists = players.some(
-    (p) => p.upiRefNo === formData.upiRefNo
-  );
-
-  const aadhaarExists = players.some(
-    (p) => p.aadhaar === formData.aadhaar
-  );
-
-  // Also fetch pendingPlayers to block duplicate registrations
-  // const pendingSnapshot = await getDocs(collection(db, "pendingPlayers"));
-  // const pendingPlayers = pendingSnapshot.docs.map((doc) => doc.data());
-
-  // const mobilePending = pendingPlayers.some(
-  //   (p) => p.mnumber === formData.mnumber
-  // );
-
-  // const upiPending = pendingPlayers.some(
-  //   (p) => p.upiRefNo === formData.upiRefNo
-  // );
-
-  // const aadhaarPending = pendingPlayers.some(
-  //   (p) => p.aadhaar === formData.aadhaar
-  // );
-
-  if (mobileExists || upiExists || aadhaarExists) {
-    setSubmitMessage("❗ User already registered!");
-    setTimeout(() => setSubmitMessage(""), 2500);
-    return; // 🚫 STOP — NO SUBMIT
-  }
-  // ---------------------------------------------------------------
-
   try {
+    // 🔍 STEP 1: COUNT APPROVED PLAYERS FROM FIRESTORE
+    const approvedSnap = await getDocs(collection(db, "players"));
+    const approvedCount = approvedSnap.size;  // total approved entries
+
+    console.log("Approved players count:", approvedCount);
+
+    if (approvedCount >= 120) {
+      setSubmitMessage("❗ Registration Closed! 120 Players Already Registered.");
+      setTimeout(() => setSubmitMessage(""), 3000);
+      return;
+    }
+
+    // 🔍 STEP 2: CHECK DUPLICATES INSIDE APPROVED PLAYERS
+    const playersData = approvedSnap.docs.map((doc) => doc.data());
+
+    const mobileExists = playersData.some(
+      (p) => p.mnumber === formData.mnumber
+    );
+
+    const upiExists = playersData.some(
+      (p) => p.upiRefNo === formData.upiRefNo
+    );
+
+    const aadhaarExists = playersData.some(
+      (p) => p.aadhaar === formData.aadhaar
+    );
+
+    if (mobileExists || upiExists || aadhaarExists) {
+      setSubmitMessage("❗ User already registered!");
+      setTimeout(() => setSubmitMessage(""), 2500);
+      return;
+    }
+
+    // 🔍 STEP 3: Convert files to Base64
     let photoBase64 = "";
     let paymentScreenshotBase64 = "";
 
@@ -784,6 +857,7 @@ export default function RegistrationForm({ isAdmin }) {
     if (formData.paymentScreenshot)
       paymentScreenshotBase64 = await toBase64(formData.paymentScreenshot);
 
+    // 🔍 STEP 4: ADD TO pendingPlayers (admin approval needed)
     await addDoc(collection(db, "pendingPlayers"), {
       ...formData,
       photo: photoBase64,
@@ -812,9 +886,10 @@ export default function RegistrationForm({ isAdmin }) {
     setTimeout(() => setSubmitMessage(""), 2500);
   } catch (err) {
     console.error(err);
-    setSubmitMessage("❌ Error submitting registration. Please check the rule above & Try again.");
+    setSubmitMessage("❌ Error submitting registration. Please try again.");
   }
 };
+
 
 
   const downloadExcel = () => {
@@ -999,16 +1074,54 @@ export default function RegistrationForm({ isAdmin }) {
 
         {/* ------------------ ADMIN VIEW ------------------ */}
         {/* ------------------ ADMIN VIEW ------------------ */}
-{isAdmin && (
-  <>
-    {loading ? (
-      <p className="text-center">Loading...</p>
-    ) : (
-      <div className="w-full flex flex-col gap-4">
-        <div className="w-full overflow-x-auto border border-gray-700 rounded-lg">
+          {isAdmin && (
+            <>
+              {loading ? (
+                <p className="text-center">Loading...</p>
+              ) : (
+                <div className="w-full flex flex-col gap-4">
+                  <div className="w-full overflow-x-auto border border-gray-700 rounded-lg">
+                    {/* <table className="w-full text-sm">
+                      <thead className="bg-gray-800 text-yellow-400">
+                        <tr>
+                          <th className="px-4 py-2">Name</th>
+                          <th className="px-4 py-2">Age</th>
+                          <th className="px-4 py-2">Type</th>
+                          <th className="px-4 py-2">Mobile</th>
+                          <th className="px-4 py-2">Aadhaar</th>
+                          <th className="px-4 py-2">Address</th>
+                          <th className="px-4 py-2">Photo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {players.map((p) => (
+                          <tr key={p.id} className="border-t border-gray-700">
+                            <td className="px-4 py-2">{p.name}</td>
+                            <td className="px-4 py-2">{p.age}</td>
+                            <td className="px-4 py-2">{p.playerType}</td>
+                            <td className="px-4 py-2">{p.mnumber}</td>
+                            <td className="px-4 py-2">{p.aadhaar}</td>
+                            <td className="px-4 py-2">{p.address}</td>
+                            <td className="px-4 py-2">
+                              {p.photo ? (
+                                <img
+                                  src={p.photo}
+                                  className="h-12 w-12 rounded-full border border-yellow-400"
+                                  alt=""
+                                />
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table> */}
+
           <table className="w-full text-sm">
             <thead className="bg-gray-800 text-yellow-400">
               <tr>
+                <th className="px-4 py-2">#</th>
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Age</th>
                 <th className="px-4 py-2">Type</th>
@@ -1019,8 +1132,9 @@ export default function RegistrationForm({ isAdmin }) {
               </tr>
             </thead>
             <tbody>
-              {players.map((p) => (
+              {players.map((p, index) => (
                 <tr key={p.id} className="border-t border-gray-700">
+                  <td className="px-4 py-2 font-bold text-yellow-300">{index + 1}</td>
                   <td className="px-4 py-2">{p.name}</td>
                   <td className="px-4 py-2">{p.age}</td>
                   <td className="px-4 py-2">{p.playerType}</td>
@@ -1042,6 +1156,7 @@ export default function RegistrationForm({ isAdmin }) {
               ))}
             </tbody>
           </table>
+
         </div>
 
         {/* Button at bottom */}

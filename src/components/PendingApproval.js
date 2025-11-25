@@ -185,14 +185,17 @@
 // }
 
 import React, { useEffect, useState } from "react";
+import { db } from "../firebase";
 import {
-  db,
   collection,
   addDoc,
   deleteDoc,
   doc,
-} from "../firebase";
-import { onSnapshot } from "firebase/firestore";
+  getDocs,
+  query,
+  where,
+  onSnapshot,
+} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 export default function PendingApproval() {
@@ -212,20 +215,91 @@ export default function PendingApproval() {
   }, []);
 
   // Approve player
+  // const handleApprove = async (player) => {
+  //   try {
+  //     await addDoc(collection(db, "players"), {
+  //       ...player,
+  //       approved: true,
+  //       approvedAt: new Date().toISOString(),
+  //     });
+  //     await deleteDoc(doc(db, "pendingPlayers", player.id));
+  //     alert(`✅ ${player.name} approved and moved to Players.`);
+  //   } catch (err) {
+  //     console.error("Error approving player:", err);
+  //     alert("❌ Something went wrong while approving.");
+  //   }
+  // };
+
+  // Function to check duplicates
+const checkDuplicate = async (player) => {
+  const playersRef = collection(db, "players");
+
+  const q = query(
+    playersRef,
+    where("mnumber", "==", player.mnumber)
+  );
+
+  const q2 = query(
+    playersRef,
+    where("aadhaar", "==", player.aadhaar)
+  );
+
+  const q3 = query(
+    playersRef,
+    where("upiRefNo", "==", player.upiRefNo)
+  );
+
+  const [snap1, snap2, snap3] = await Promise.all([
+    getDocs(q),
+    getDocs(q2),
+    getDocs(q3)
+  ]);
+
+  if (!snap1.empty) return { duplicate: true, data: snap1.docs[0].data(), field: "Mobile Number" };
+  if (!snap2.empty) return { duplicate: true, data: snap2.docs[0].data(), field: "Aadhaar" };
+  if (!snap3.empty) return { duplicate: true, data: snap3.docs[0].data(), field: "UPI Ref No" };
+
+  return { duplicate: false };
+};
+
   const handleApprove = async (player) => {
-    try {
-      await addDoc(collection(db, "players"), {
-        ...player,
-        approved: true,
-        approvedAt: new Date().toISOString(),
-      });
-      await deleteDoc(doc(db, "pendingPlayers", player.id));
-      alert(`✅ ${player.name} approved and moved to Players.`);
-    } catch (err) {
-      console.error("Error approving player:", err);
-      alert("❌ Something went wrong while approving.");
+  try {
+    // 🔍 Step 1: Check for duplicates
+    const duplicateCheck = await checkDuplicate(player);
+
+    if (duplicateCheck.duplicate) {
+      const p = duplicateCheck.data;
+
+      alert(
+        `❌ Duplicate Entry Found (${duplicateCheck.field})\n\n` +
+        `Existing Player:\n` +
+        `Name: ${p.name}\n` +
+        `Mobile: ${p.mnumber}\n` +
+        `Aadhaar: ${p.aadhaar}\n` +
+        `UPI Ref: ${p.upiRefNo}\n\n` +
+        `This player cannot be approved.`
+      );
+
+      return; // ⛔ Stop here — do NOT approve or delete
     }
-  };
+
+    // ✅ Step 2: If no duplicate → Approve player
+    await addDoc(collection(db, "players"), {
+      ...player,
+      approved: true,
+      approvedAt: new Date().toISOString(),
+    });
+
+    // Remove from pending
+    await deleteDoc(doc(db, "pendingPlayers", player.id));
+
+    alert(`✅ ${player.name} approved and moved to Players.`);
+  } catch (err) {
+    console.error("Error approving player:", err);
+    alert("❌ Something went wrong while approving.");
+  }
+};
+
 
   // Reject player
   const handleReject = async (id, name) => {

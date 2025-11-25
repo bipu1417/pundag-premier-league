@@ -674,6 +674,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { db, collection, addDoc, getDocs } from "../firebase";
 import PaymentPage from "./PaymentPage";
+import Swal from "sweetalert2";
 
 export default function RegistrationForm({ isAdmin }) {
   const [formData, setFormData] = useState({
@@ -690,7 +691,7 @@ export default function RegistrationForm({ isAdmin }) {
 
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState("");
+  // const [submitMessage, setSubmitMessage] = useState("");
 
   // Convert file to Base64
   const toBase64 = (file) =>
@@ -701,16 +702,56 @@ export default function RegistrationForm({ isAdmin }) {
       reader.onerror = (err) => reject(err);
     });
 
+  // const fetchPlayers = async () => {
+  //   setLoading(true);
+  //   const querySnapshot = await getDocs(collection(db, "players"));
+  //   const data = querySnapshot.docs.map((doc) => ({
+  //     id: doc.id,
+  //     ...doc.data(),
+  //   }));
+  //   setPlayers(data);
+  //   setLoading(false);
+  // };
+
   const fetchPlayers = async () => {
-    setLoading(true);
-    const querySnapshot = await getDocs(collection(db, "players"));
-    const data = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setPlayers(data);
-    setLoading(false);
-  };
+  setLoading(true);
+
+  const querySnapshot = await getDocs(collection(db, "players"));
+  let data = querySnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+
+  // 🔥 REMOVE DUPLICATES (keep first entry)
+  const uniqueMap = new Map();
+
+  data.forEach((player) => {
+    const key1 = `mobile-${player.mnumber}`;
+    const key2 = `aadhaar-${player.aadhaar}`;
+    const key3 = `upi-${player.upiRefNo}`;
+
+    // If ANY key was already seen → skip this player
+    if (
+      uniqueMap.has(key1) ||
+      uniqueMap.has(key2) ||
+      uniqueMap.has(key3)
+    ) {
+      return; // skip duplicate
+    }
+
+    // Store the player for all three keys
+    uniqueMap.set(key1, player);
+    uniqueMap.set(key2, player);
+    uniqueMap.set(key3, player);
+  });
+
+  // Convert map to unique list
+  const uniquePlayers = [...new Set([...uniqueMap.values()])];
+
+  setPlayers(uniquePlayers);
+  setLoading(false);
+};
+
 
   useEffect(() => {
     if (isAdmin) fetchPlayers();
@@ -725,81 +766,6 @@ export default function RegistrationForm({ isAdmin }) {
     }
   };
 
-//   const handleSubmit = async (e) => {
-//   e.preventDefault();
-
-//   if (
-//     !formData.name ||
-//     !formData.age ||
-//     !formData.playerType ||
-//     !formData.mnumber ||
-//     !formData.upiRefNo
-//   ) {
-//     setSubmitMessage("❗ Please fill all required fields including payment!");
-//     return;
-//   }
-
-//   // --------- 🔍 CHECK DUPLICATE ENTRY (FRONTEND ONLY) ----------
-//   // Check inside already fetched players (approved)
-//   const mobileExists = players.some(
-//     (p) => p.mnumber === formData.mnumber
-//   );
-
-//   const upiExists = players.some(
-//     (p) => p.upiRefNo === formData.upiRefNo
-//   );
-
-//   const aadhaarExists = players.some(
-//     (p) => p.aadhaar === formData.aadhaar
-//   );
-
-//   if (mobileExists || upiExists || aadhaarExists) {
-//     setSubmitMessage("❗ User already registered!");
-//     setTimeout(() => setSubmitMessage(""), 2500);
-//     return; // 🚫 STOP — NO SUBMIT
-//   }
-//   // ---------------------------------------------------------------
-
-//   try {
-//     let photoBase64 = "";
-//     let paymentScreenshotBase64 = "";
-
-//     if (formData.photo) photoBase64 = await toBase64(formData.photo);
-//     if (formData.paymentScreenshot)
-//       paymentScreenshotBase64 = await toBase64(formData.paymentScreenshot);
-
-//     await addDoc(collection(db, "pendingPlayers"), {
-//       ...formData,
-//       photo: photoBase64,
-//       paymentScreenshot: paymentScreenshotBase64,
-//       approved: false,
-//       paymentStatus: "pending",
-//       timestamp: new Date(),
-//     });
-
-//     setSubmitMessage(
-//       "✅ Registration submitted! Please wait for admin approval."
-//     );
-
-//     setFormData({
-//       name: "",
-//       age: "",
-//       playerType: "",
-//       mnumber: "",
-//       aadhaar: "",
-//       address: "",
-//       photo: null,
-//       paymentScreenshot: null,
-//       upiRefNo: "",
-//     });
-
-//     setTimeout(() => setSubmitMessage(""), 2500);
-//   } catch (err) {
-//     console.error(err);
-//     setSubmitMessage("❌ Error submitting registration. Please check the rule above & Try again.");
-//   }
-// };
-
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -811,7 +777,12 @@ const handleSubmit = async (e) => {
     !formData.mnumber ||
     !formData.upiRefNo
   ) {
-    setSubmitMessage("❗ Please fill all required fields including payment!");
+    // setSubmitMessage("❗ Please fill all required fields including payment!");
+    Swal.fire({
+        icon: "warning",
+        title: "Oops...",
+        text: "❗ Please fill all required fields including payment!",
+      });
     return;
   }
 
@@ -823,8 +794,13 @@ const handleSubmit = async (e) => {
     console.log("Approved players count:", approvedCount);
 
     if (approvedCount >= 120) {
-      setSubmitMessage("❗ Registration Closed! 120 Players Already Registered.");
-      setTimeout(() => setSubmitMessage(""), 3000);
+      // setSubmitMessage("❗ Registration Closed! 120 Players Already Registered.");
+      Swal.fire({
+        icon: "warning",
+        title: "Oops...",
+        text: "❗ Registration Closed! 120 Players Already Registered.",
+      });
+      // setTimeout(() => setSubmitMessage(""), 3000);
       return;
     }
 
@@ -844,8 +820,13 @@ const handleSubmit = async (e) => {
     );
 
     if (mobileExists || upiExists || aadhaarExists) {
-      setSubmitMessage("❗ User already registered!");
-      setTimeout(() => setSubmitMessage(""), 2500);
+      // setSubmitMessage("❗ User already registered!");
+      Swal.fire({
+        icon: "success",
+        title: " Duplicate Entry !!",
+        text: "❗ User Already Registered. Please wait for admin approval.",
+      });
+      // setTimeout(() => setSubmitMessage(""), 2500);
       return;
     }
 
@@ -867,9 +848,15 @@ const handleSubmit = async (e) => {
       timestamp: new Date(),
     });
 
-    setSubmitMessage(
-      "✅ Registration submitted! Please wait for admin approval."
-    );
+    // setSubmitMessage(
+    //   "✅ Registration submitted! Please wait for admin approval."
+    // );
+
+    Swal.fire({
+      icon: "success",
+      title: "Registration Successful ✅",
+      text: "Thank you for registering! Please wait for admin to approve!",
+    });
 
     setFormData({
       name: "",
@@ -883,10 +870,15 @@ const handleSubmit = async (e) => {
       upiRefNo: "",
     });
 
-    setTimeout(() => setSubmitMessage(""), 2500);
+    // setTimeout(() => setSubmitMessage(""), 2500);
   } catch (err) {
     console.error(err);
-    setSubmitMessage("❌ Error submitting registration. Please try again.");
+    // setSubmitMessage("❌ Error submitting registration. Please try again.");
+    Swal.fire({
+      icon: "error",
+      title: "Registration UnSuccessful ✅",
+      text: "❌ Error submitting registration. Please try again.",
+    });
   }
 };
 
@@ -1053,11 +1045,11 @@ const handleSubmit = async (e) => {
                   />
                 </div>
 
-                {submitMessage && (
+                {/* {submitMessage && (
                   <p className="text-center text-yellow-400 font-semibold p-2 text-sm">
                     {submitMessage}
                   </p>
-                )}
+                )} */}
 
                 <div className="text-center pt-1">
                   <button
@@ -1081,42 +1073,6 @@ const handleSubmit = async (e) => {
               ) : (
                 <div className="w-full flex flex-col gap-4">
                   <div className="w-full overflow-x-auto border border-gray-700 rounded-lg">
-                    {/* <table className="w-full text-sm">
-                      <thead className="bg-gray-800 text-yellow-400">
-                        <tr>
-                          <th className="px-4 py-2">Name</th>
-                          <th className="px-4 py-2">Age</th>
-                          <th className="px-4 py-2">Type</th>
-                          <th className="px-4 py-2">Mobile</th>
-                          <th className="px-4 py-2">Aadhaar</th>
-                          <th className="px-4 py-2">Address</th>
-                          <th className="px-4 py-2">Photo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {players.map((p) => (
-                          <tr key={p.id} className="border-t border-gray-700">
-                            <td className="px-4 py-2">{p.name}</td>
-                            <td className="px-4 py-2">{p.age}</td>
-                            <td className="px-4 py-2">{p.playerType}</td>
-                            <td className="px-4 py-2">{p.mnumber}</td>
-                            <td className="px-4 py-2">{p.aadhaar}</td>
-                            <td className="px-4 py-2">{p.address}</td>
-                            <td className="px-4 py-2">
-                              {p.photo ? (
-                                <img
-                                  src={p.photo}
-                                  className="h-12 w-12 rounded-full border border-yellow-400"
-                                  alt=""
-                                />
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table> */}
 
           <table className="w-full text-sm">
             <thead className="bg-gray-800 text-yellow-400">

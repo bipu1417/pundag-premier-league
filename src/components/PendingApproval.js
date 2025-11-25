@@ -197,6 +197,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function PendingApproval() {
   const [pendingPlayers, setPendingPlayers] = useState([]);
@@ -270,15 +271,27 @@ const checkDuplicate = async (player) => {
     if (duplicateCheck.duplicate) {
       const p = duplicateCheck.data;
 
-      alert(
-        `❌ Duplicate Entry Found (${duplicateCheck.field})\n\n` +
-        `Existing Player:\n` +
-        `Name: ${p.name}\n` +
-        `Mobile: ${p.mnumber}\n` +
-        `Aadhaar: ${p.aadhaar}\n` +
-        `UPI Ref: ${p.upiRefNo}\n\n` +
-        `This player cannot be approved.`
-      );
+      // alert(
+        // `❌ Duplicate Entry Found (${duplicateCheck.field})\n\n` +
+        // `Existing Player:\n` +
+        // `Name: ${p.name}\n` +
+        // `Mobile: ${p.mnumber}\n` +
+        // `Aadhaar: ${p.aadhaar}\n` +
+        // `UPI Ref: ${p.upiRefNo}\n\n` +
+        // `This player cannot be approved.`
+      // );
+
+      Swal.fire({
+              icon: "warning",
+              title: "Oops...",
+              text:   `❌ Duplicate Entry Found (${duplicateCheck.field})\n\n` +
+                      `Existing Player:\n` +
+                      `Name: ${p.name}\n` +
+                      `Mobile: ${p.mnumber}\n` +
+                      `Aadhaar: ${p.aadhaar}\n` +
+                      `UPI Ref: ${p.upiRefNo}\n\n` +
+                      `This player cannot be approved.`,
+            });
 
       return; // ⛔ Stop here — do NOT approve or delete
     }
@@ -293,10 +306,20 @@ const checkDuplicate = async (player) => {
     // Remove from pending
     await deleteDoc(doc(db, "pendingPlayers", player.id));
 
-    alert(`✅ ${player.name} approved and moved to Players.`);
+    // alert(`✅ ${player.name} approved and moved to Players.`);
+    Swal.fire({
+              icon: "success",
+              title: "Approved ✅",
+              text:   `✅ ${player.name} approved and moved to Registered Players.`,
+            });
   } catch (err) {
     console.error("Error approving player:", err);
-    alert("❌ Something went wrong while approving.");
+    // alert("❌ Something went wrong while approving.");
+    Swal.fire({
+              icon: "error",
+              title: "Error",
+              text:   "❌ Something went wrong while approving.",
+            });
   }
 };
 
@@ -306,7 +329,12 @@ const checkDuplicate = async (player) => {
     if (window.confirm(`Reject ${name}?`)) {
       try {
         await deleteDoc(doc(db, "pendingPlayers", id));
-        alert(`❌ ${name} has been rejected.`);
+        // alert(`❌ ${name} has been rejected.`);
+        Swal.fire({
+              icon: "info",
+              title: "Rejected !!",
+              text:   `❌ ${name} has been rejected.`,
+            });
       } catch (err) {
         console.error("Error rejecting player:", err);
         alert("❌ Something went wrong while rejecting.");

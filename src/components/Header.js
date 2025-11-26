@@ -119,6 +119,14 @@ export default function Header({ isAdmin, setIsAdmin }) {
             Team Reveal
           </Link>
 
+          <Link
+            to="/registered-players"
+            className="hover:text-yellow-400 transition"
+            onClick={() => setMenuOpen(false)}
+          >
+            Player List
+          </Link>
+
           {/* Registration (Mobile) */}
           {isRegistrationOpen ? (
             <Link

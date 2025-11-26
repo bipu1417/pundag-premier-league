@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { db, doc, getDoc, deleteDoc, addDoc, collection } from "../firebase";
+import { db, doc, getDoc } from "../firebase";
 import { useParams, useNavigate } from "react-router-dom";
 
 export default function PendingPlayerDetails() {
@@ -20,23 +20,6 @@ export default function PendingPlayerDetails() {
 
     fetchPlayer();
   }, [id]);
-
-  const handleApprove = async () => {
-    await addDoc(collection(db, "players"), {
-      ...player,
-      approved: true,
-      approvedAt: new Date().toISOString(),
-    });
-    await deleteDoc(doc(db, "pendingPlayers", player.id));
-    alert("Approved!");
-    navigate("/pending-approvals");
-  };
-
-  const handleReject = async () => {
-    await deleteDoc(doc(db, "pendingPlayers", player.id));
-    alert("Rejected!");
-    navigate("/pending-approvals");
-  };
 
   if (loading) return <p className="text-center text-gray-300">Loading...</p>;
   if (!player) return <p className="text-center text-gray-400">Player not found</p>;

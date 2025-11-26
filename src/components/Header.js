@@ -15,12 +15,12 @@ export default function Header({ isAdmin, setIsAdmin }) {
   const today = new Date();
   const year = 2025;
   const registrationStart = new Date(`${year}-11-15T00:00:00`);
-  const registrationEnd = new Date(`${year}-11-25T23:59:59`);
+  const registrationEnd = new Date(`${year}-11-26T23:59:59`);
   const isRegistrationOpen =
     today >= registrationStart && today <= registrationEnd;
 
   return (
-    <header className="relative bg-black text-white sticky top-0 shadow-lg z-50 overflow-hidden">
+    <header className="relative bg-black text-white top-0 shadow-lg z-50 overflow-hidden">
       {/* Circling Gradient Background Animation */}
       <div className="absolute inset-0 animate-rotateGradient bg-[conic-gradient(from_0deg,rgba(255,215,0,0.5),rgba(255,140,0,0.3),rgba(255,215,0,0.5))]" />
       <div className="absolute inset-[2px] bg-black" /> {/* Inner layer */}

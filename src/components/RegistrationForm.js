@@ -675,6 +675,7 @@ import { saveAs } from "file-saver";
 import { db, collection, addDoc, getDocs } from "../firebase";
 import PaymentPage from "./PaymentPage";
 import Swal from "sweetalert2";
+import { useNavigate } from "react-router-dom";
 
 export default function RegistrationForm({ isAdmin }) {
   const [formData, setFormData] = useState({
@@ -689,6 +690,7 @@ export default function RegistrationForm({ isAdmin }) {
     upiRefNo: "",
   });
 
+  const navigate = useNavigate();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   // const [submitMessage, setSubmitMessage] = useState("");
@@ -713,7 +715,7 @@ export default function RegistrationForm({ isAdmin }) {
   //   setLoading(false);
   // };
 
-  const fetchPlayers = async () => {
+const fetchPlayers = async () => {
   setLoading(true);
 
   const querySnapshot = await getDocs(collection(db, "players"));
@@ -747,6 +749,11 @@ export default function RegistrationForm({ isAdmin }) {
 
   // Convert map to unique list
   const uniquePlayers = [...new Set([...uniqueMap.values()])];
+
+  // ✅ SORT A → Z by name
+  uniquePlayers.sort((a, b) =>
+    a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+  );
 
   setPlayers(uniquePlayers);
   setLoading(false);
@@ -1089,7 +1096,9 @@ const handleSubmit = async (e) => {
             </thead>
             <tbody>
               {players.map((p, index) => (
-                <tr key={p.id} className="border-t border-gray-700">
+                <tr key={p.id} 
+                className="border-t border-gray-700" 
+                onClick={() => navigate(`/player/${p.aadhaar}`)}>
                   <td className="px-4 py-2 font-bold text-yellow-300">{index + 1}</td>
                   <td className="px-4 py-2">{p.name}</td>
                   <td className="px-4 py-2">{p.age}</td>

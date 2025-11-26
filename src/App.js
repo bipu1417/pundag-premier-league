@@ -12,6 +12,7 @@ import PendingApproval from './components/PendingApproval';
 import PaymentPage from './components/PaymentPage';
 import PendingPlayerDetails from "./pages/PendingPlayerDetails";
 import { AboutPpl } from "./pages/AboutPpl";
+import RegisteredPlayers from "./pages/RegisteredPlayers";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -40,6 +41,7 @@ function App() {
             <Route path="/pending-player/:id" element={<PendingPlayerDetails />} />
             <Route path="/admin-login" element={<AdminLogin setIsAdmin={setIsAdmin} />} />
             <Route path="/player/:id" element={<PlayerDetails />} />
+            <Route path="/registered-players" element={<RegisteredPlayers />} />
           </Routes>
         </main>
 

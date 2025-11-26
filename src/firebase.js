@@ -7,6 +7,9 @@ import {
   getDocs,
   getDoc,
   deleteDoc,
+  query,
+  orderBy,
+  onSnapshot,
   doc
 } from "firebase/firestore";
 
@@ -32,4 +35,4 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);  // ✅ FIXED: Now available
 
 // Export Firestore helpers
-export { collection, addDoc, getDocs, getDoc, deleteDoc, doc };
+export { collection, addDoc, getDocs, query, orderBy, getDoc, onSnapshot, deleteDoc, doc };

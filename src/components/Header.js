@@ -42,7 +42,9 @@ export default function Header({ isAdmin, setIsAdmin }) {
           <Link to="/" className="hover:text-yellow-400 transition">
             Home
           </Link>
-
+          <Link to="/registered-players" className="hover:text-yellow-400 transition">
+            Player List
+          </Link>
           <Link to="/team-reveal" className="hover:text-yellow-400 transition">
             Team Reveal
           </Link>

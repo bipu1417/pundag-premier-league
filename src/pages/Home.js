@@ -120,21 +120,24 @@
 
 import React, { useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-// import TeamReveal from "../components/TeamReveal";
 import { AboutPpl } from "./AboutPpl";
+import auction from "../assets/auction.png";
 
-export default function Home() {
+const Home = () => {
   const currentYear = new Date().getFullYear();
 
   // Registration period (Nov 15–26, 2025)
   const today = new Date();
   // const startDate = new Date(2025, 10, 15); // Month is 0-indexed (10 = November)
   // const endDate = new Date(2025, 10, 26, 23, 59, 59);
+  const [countdown, setCountdown] = useState("");
   const startDate = React.useMemo(() => new Date(2025, 10, 15), []);
-const endDate = React.useMemo(() => new Date(2025, 10, 26, 23, 59, 59), []);
+const endDate = React.useMemo(() => new Date(2025, 10, 26, 16, 59, 59), []);
+
   const isRegistrationOpen = today >= startDate && today <= endDate;
   const isRegistrationClosed = today > endDate;
 
+  
   // formatted last day string e.g. "26 November 2025"
   const formattedEndDate = useMemo(() => {
     return new Intl.DateTimeFormat("en-GB", {
@@ -145,7 +148,6 @@ const endDate = React.useMemo(() => new Date(2025, 10, 26, 23, 59, 59), []);
   }, [endDate]);
 
   // Optional: simple countdown (days/hours) while registration is open
-  const [countdown, setCountdown] = useState("");
   useEffect(() => {
     if (!isRegistrationOpen) return;
 
@@ -185,6 +187,7 @@ const endDate = React.useMemo(() => new Date(2025, 10, 26, 23, 59, 59), []);
         backgroundRepeat: "no-repeat",
       }}
     >
+      
       {/* Tournament Dates Card */}
       <div
         className="absolute top-4 left-4 bg-yellow-400 text-black font-bold 
@@ -227,9 +230,29 @@ const endDate = React.useMemo(() => new Date(2025, 10, 26, 23, 59, 59), []);
         </div>
       </div>
 
+       <br /> <br /><br /> <br /><br /> <br />
+      {/* 🔥 Clean Auction Marquee (no border) */}
+        <div className="w-full overflow-hidden mb-6">
+          <div className="bg-black/40 px-4 py-2 rounded-xl backdrop-blur-md flex">
+          {/* <img src={auction} alt="auction" className="h-12 w-12" /> */}
+            <div className="whitespace-nowrap animate-scroll text-yellow-300 font-bold text-lg sm:text-xl flex items-center gap-1">
+              <span className="flex items-center gap-2">
+                {/* <span className="text-yellow-300 animate-beep bg-amber-600">Auction</span> */}
+                🏏 তৈরি হয়ে যান — উত্তেজনা আরও বাড়তে চলেছে! ৭ই ডিসেম্বর ২০২৫ - এ হচ্ছে জমজমাট Auction!
+              </span>
+              <span className="flex items-center gap-2">
+                {/* <span className="text-yellow-300 animate-beep bg-amber-600">Auction </span> */}
+                🏏 Get ready — the excitement continues as the Auction goes live on 7th December 2025 
+              </span>
+
+            </div>
+          </div>
+        </div>
+
+
       {/* Title */}
       <h1
-        className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-64 mb-6 
+        className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-16 mb-6 
         drop-shadow-[0_4px_8px_rgba(0,0,0,0.7)]"
       >
         Welcome to Pundag Premier League 🏏
@@ -297,7 +320,7 @@ const endDate = React.useMemo(() => new Date(2025, 10, 26, 23, 59, 59), []);
           bg-gradient-to-r from-gray-500 via-gray-600 to-gray-700 
           opacity-60 cursor-not-allowed"
         >
-          Registration Opening Soon
+          Registration Closed
         </button>
       )}
 
@@ -307,3 +330,6 @@ const endDate = React.useMemo(() => new Date(2025, 10, 26, 23, 59, 59), []);
     </div>
   );
 }
+
+
+export default Home;

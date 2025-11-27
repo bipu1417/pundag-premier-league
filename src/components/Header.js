@@ -15,7 +15,7 @@ export default function Header({ isAdmin, setIsAdmin }) {
   const today = new Date();
   const year = 2025;
   const registrationStart = new Date(`${year}-11-15T00:00:00`);
-  const registrationEnd = new Date(`${year}-11-26T23:59:59`);
+  const registrationEnd = new Date(`${year}-11-26T16:59:59`);
   const isRegistrationOpen =
     today >= registrationStart && today <= registrationEnd;
 
@@ -57,7 +57,7 @@ export default function Header({ isAdmin, setIsAdmin }) {
           ) : (
             <span
               className="cursor-not-allowed text-gray-500"
-              title="Registration opens 15–25 Nov 2025"
+              title="Registration Closed!"
             >
               Registration
             </span>
@@ -139,7 +139,7 @@ export default function Header({ isAdmin, setIsAdmin }) {
           ) : (
             <span
               className="text-gray-500 cursor-not-allowed"
-              title="Registration opens 15–25 Nov 2025"
+              title="Registration Closed!"
             >
               Registration
             </span>
@@ -175,28 +175,6 @@ export default function Header({ isAdmin, setIsAdmin }) {
           )}
         </nav>
       )}
-
-      {/* Animations */}
-      <style>{`
-        @keyframes gradientMove {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-
-        .animate-gradientMove {
-          animation: gradientMove 4s ease infinite;
-        }
-
-        @keyframes rotateGradient {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .animate-rotateGradient {
-          animation: rotateGradient 8s linear infinite;
-        }
-      `}</style>
     </header>
   );
 }

@@ -5,3 +5,40 @@
 body {
   font-family: 'Poppins', sans-serif;
 }
+@keyframes scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-scroll {
+  display: inline-block;
+  animation: scroll 18s linear infinite;
+}
+
+@keyframes beep {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.animate-beep {
+  animation: beep 1s infinite;
+}
+
+@keyframes gradientMove {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        .animate-gradientMove {
+          animation: gradientMove 4s ease infinite;
+        }
+
+        @keyframes rotateGradient {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .animate-rotateGradient {
+          animation: rotateGradient 8s linear infinite;
+        }

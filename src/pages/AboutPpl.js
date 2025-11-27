@@ -1,15 +1,33 @@
-// AboutPpl.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
+import vvk from "../assets/10.jpeg";
+import sany from "../assets/5.jpeg";
+import naba from "../assets/3.jpeg";
+import psp from "../assets/1.jpeg";
+import yg from "../assets/4.jpeg";
+import ab from "../assets/9.jpeg";
+import cd from "../assets/8.jpeg";
+import ef from "../assets/7.jpeg";
+import gh from "../assets/6.jpeg";
+import ij from "../assets/2.jpeg";
 
 export function AboutPpl() {
+
+  const [year, setYear] = useState("");
+
+    useEffect(() => {
+      const currentYear = new Date().getFullYear();
+      setYear(currentYear);
+    }, []);
+
+
   const historyData = [
-    { year: 2019, champion: "Pundag Warriors", runner: "Bariatu Strikers" },
-    { year: 2020, champion: "Greenfield Titans", runner: "Pundag Warriors" },
-    { year: 2021, champion: "Bariatu Strikers", runner: "City Lions" },
-    { year: 2022, champion: "Sunrise Kings", runner: "Greenfield Titans" },
-    { year: 2023, champion: "PPL Royals", runner: "Sunrise Kings" },
-    { year: 2024, champion: "Thunder Eleven", runner: "PPL Royals" },
-    { year: 2025, champion: "City Lions", runner: "Thunder Eleven" },
+    { year: 2019, champion: "Mayadih Sixer", runner: "Jay Baba Baro Saheb, Sidhi" },
+    { year: 2020, champion: "Kings XI, Pundag", runner: "Rampur Trophy Fighters" },
+    { year: 2021, champion: "Skipped", runner: "Skipped" },
+    { year: 2022, champion: "SSAC Ananda Marga College", runner: "DD Warriors, Pundag" },
+    { year: 2023, champion: "Team Avengers, Darikuri", runner: "G. K. Sunrise Tigers" },
+    { year: 2024, champion: "DD Warriors, Pundag", runner: "Royal Challengers, Singghagra" },
+    { year: 2025, champion: "TBD", runner: "TBD" },
   ];
 
   return (
@@ -18,7 +36,7 @@ export function AboutPpl() {
 
       {/* History */}
       <section className="mt-8 max-w-5xl mx-auto">
-        <h2 className="text-2xl font-bold text-yellow-400 mb-4">Tournament History (2019 - 2025)</h2>
+        <h2 className="text-2xl font-bold text-yellow-400 mb-4">Tournament History (2019 - {year})</h2>
         <p className="text-gray-300 mb-6 text-sm md:text-base leading-relaxed">
           A quick look at the champions and runners-up from each season of PPL.
         </p>
@@ -75,16 +93,25 @@ export function AboutPpl() {
           </p>
         </div>
       </section>
+      <section className="mt-12 max-w-5xl mx-auto mb-12">
+          <PplCommittee />
+      </section>
     </div>
   );
 }
 
 export function PplCommittee() {
   const committeeMembers = [
-    { name: "Rohit Raj", role: "Coordinator", img: "../assets/1.jpg" },
-    { name: "Shubham Kumar", role: "Operations", img: "/2.jpg" },
-    { name: "Vijay Kumar", role: "Logistics", img: "/3.jpg" },
-    { name: "Avinash Kumar", role: "Media", img: "/4.jpg" },
+    { name: "Vivekananda Mahato", role: "Chairman", img: vvk },
+    { name: "Naba Kumar Mahato", role: "Vice-Chairman", img: naba },
+    { name: "Yudhisthir Gope", role: "Logistics", img: yg },
+    { name: "Sany Paramanik", role: "Secretary", img: sany },
+    { name: "Pushpendu Paramanik", role: "Member", img: psp },
+    { name: "XYZ", role: "Member", img: ab },
+    { name: "ABC", role: "Member", img: cd },
+    { name: "ABC", role: "Member", img: ef },
+    { name: "Sanat Mahato", role: "Member", img: gh },
+    { name: "QWERTY", role: "Member", img: ij },
   ];
 
   return (

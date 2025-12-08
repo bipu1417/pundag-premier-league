@@ -107,11 +107,11 @@ export function PplCommittee() {
     { name: "Yudhisthir Gope", role: "Logistics", img: yg },
     { name: "Sany Paramanik", role: "Secretary", img: sany },
     { name: "Pushpendu Paramanik", role: "Member", img: psp },
-    { name: "XYZ", role: "Member", img: ab },
-    { name: "ABC", role: "Member", img: cd },
-    { name: "ABC", role: "Member", img: ef },
+    { name: "Manoj Gope", role: "Member", img: ab },
+    { name: "Bikash Mahato", role: "Member", img: cd },
+    { name: "Pankaj Muda", role: "Member", img: ef },
     { name: "Sanat Mahato", role: "Member", img: gh },
-    { name: "QWERTY", role: "Member", img: ij },
+    { name: "Rahul Adhikary", role: "Member", img: ij },
   ];
 
   return (

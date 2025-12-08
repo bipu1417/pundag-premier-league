@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 
 export default function Header({ isAdmin, setIsAdmin }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = () => {
@@ -11,7 +12,7 @@ export default function Header({ isAdmin, setIsAdmin }) {
     navigate("/");
   };
 
-  // === Registration Enable Logic ===
+  // === Registration Logic ===
   const today = new Date();
   const year = 2025;
   const registrationStart = new Date(`${year}-11-15T00:00:00`);
@@ -19,139 +20,104 @@ export default function Header({ isAdmin, setIsAdmin }) {
   const isRegistrationOpen =
     today >= registrationStart && today <= registrationEnd;
 
+  // === Helper: Active Link ===
+  const isActive = (path) =>
+    location.pathname === path
+      ? "text-yellow-400 font-semibold border-b-2 border-yellow-400"
+      : "hover:text-yellow-400 transition";
+
   return (
-    <header className="relative bg-black text-white top-0 shadow-lg z-50 overflow-hidden">
-      {/* Circling Gradient Background Animation */}
-      <div className="absolute inset-0 animate-rotateGradient bg-[conic-gradient(from_0deg,rgba(255,215,0,0.5),rgba(255,140,0,0.3),rgba(255,215,0,0.5))]" />
-      <div className="absolute inset-[2px] bg-black" /> {/* Inner layer */}
+    <header className="relative bg-black text-white top-0 shadow-lg z-50">
+      {/* Animated Background */}
+      <div className="absolute inset-0 animate-rotateGradient bg-[conic-gradient(from_0deg,rgba(255,215,0,0.4),rgba(255,140,0,0.2),rgba(255,215,0,0.4))]" />
+      <div className="absolute inset-[2px] bg-black" />
 
       <div className="relative container mx-auto flex justify-between items-center p-4">
-        {/* Logo / Title */}
-        <h1
-          className="relative text-xl sm:text-2xl font-bold text-yellow-400 
+        {/* Logo */}
+        <h1 className="relative text-xl sm:text-2xl font-bold text-yellow-400 
           p-[2px] rounded-xl bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500
-          bg-[length:200%_200%] animate-gradientMove"
-        >
+          bg-[length:200%_200%] animate-gradientMove">
           <span className="block bg-black px-4 py-1 rounded-lg">
             Pundag Premier League
           </span>
         </h1>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex space-x-6 items-center">
-          <Link to="/" className="hover:text-yellow-400 transition">
-            Home
-          </Link>
-          <Link to="/registered-players" className="hover:text-yellow-400 transition">
-            Player List
-          </Link>
-          <Link to="/team-reveal" className="hover:text-yellow-400 transition">
-            Team Reveal
-          </Link>
+        {/* Desktop Navigation (Glassmorphism) */}
+        <nav className="hidden md:flex space-x-6 items-center 
+            backdrop-blur-md bg-white/10 border border-white/20 
+            px-6 py-3 rounded-2xl shadow-lg">
+          
+          <Link to="/" className={isActive("/")}>Home</Link>
+          <Link to="/auction" className={isActive("/auction")}>Auction</Link>
+          <Link to="/registered-players" className={isActive("/registered-players")}>Player List</Link>
+          <Link to="/team-reveal" className={isActive("/team-reveal")}>Team Reveal</Link>
 
-          {/* Registration Menu with Date Restriction */}
+          {/* Registration */}
           {isRegistrationOpen ? (
-            <Link to="/registration" className="hover:text-yellow-400 transition">
-              Registration
-            </Link>
+            <Link to="/registration" className={isActive("/registration")}>Registration</Link>
           ) : (
-            <span
-              className="cursor-not-allowed text-gray-500"
-              title="Registration Closed!"
-            >
-              Registration
-            </span>
+            <span className="text-gray-500 cursor-not-allowed">Registration</span>
           )}
 
-          {isAdmin ? (
+          {/* Admin Menus */}
+          {isAdmin && (
             <>
-              <Link
-                to="/pending-approval"
-                className="hover:text-yellow-400 transition"
-              >
+              <Link to="/create-team" className={isActive("/create-team")}>Teams</Link>
+              <Link to="/pending-approval" className={isActive("/pending-approval")}>
                 Pending Approval
               </Link>
               <button
                 onClick={handleLogout}
                 className="text-red-400 hover:text-red-500 transition"
               >
-                Logout (Admin)
+                Logout
               </button>
             </>
-          ) : (
-            <Link to="/admin-login" className="hover:text-yellow-400 transition">
+          )}
+
+          {!isAdmin && (
+            <Link className={isActive("/admin-login")} to="/admin-login">
               Admin Login
             </Link>
           )}
         </nav>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Toggle */}
         <button
-          className="md:hidden text-yellow-400 focus:outline-none z-10"
+          className="md:hidden text-yellow-400 z-20"
           onClick={() => setMenuOpen(!menuOpen)}
         >
           {menuOpen ? <X size={26} /> : <Menu size={26} />}
         </button>
       </div>
 
-      {/* Mobile Dropdown Menu */}
+      {/* Mobile Dropdown (Glassmorphism) */}
       {menuOpen && (
-        <nav className="md:hidden bg-black border-t border-gray-700 flex flex-col items-center space-y-4 py-4 relative z-10">
-          <Link
-            to="/"
-            className="hover:text-yellow-400 transition"
-            onClick={() => setMenuOpen(false)}
-          >
-            Home
-          </Link>
-          <Link
-            to="/about"
-            className="hover:text-yellow-400 transition"
-            onClick={() => setMenuOpen(false)}
-          >
-            About
-          </Link>
-          <Link
-            to="/team-reveal"
-            className="hover:text-yellow-400 transition"
-            onClick={() => setMenuOpen(false)}
-          >
-            Team Reveal
-          </Link>
+        <nav
+          className="md:hidden flex flex-col items-center py-6 space-y-4 
+          backdrop-blur-xl bg-white/10 border-t border-white/20 relative z-10"
+        >
+          <Link to="/" onClick={() => setMenuOpen(false)} className={isActive("/")}>Home</Link>
+          <Link to="/about" onClick={() => setMenuOpen(false)} className={isActive("/about")}>About</Link>
+          <Link to="/auction" onClick={() => setMenuOpen(false)} className={isActive("/auction")}>Auction</Link>
+          <Link to="/team-reveal" onClick={() => setMenuOpen(false)} className={isActive("/team-reveal")}>Team Reveal</Link>
+          <Link to="/registered-players" onClick={() => setMenuOpen(false)} className={isActive("/registered-players")}>Player List</Link>
 
-          <Link
-            to="/registered-players"
-            className="hover:text-yellow-400 transition"
-            onClick={() => setMenuOpen(false)}
-          >
-            Player List
-          </Link>
-
-          {/* Registration (Mobile) */}
           {isRegistrationOpen ? (
-            <Link
-              to="/registration"
-              className="hover:text-yellow-400 transition"
-              onClick={() => setMenuOpen(false)}
-            >
+            <Link to="/registration" onClick={() => setMenuOpen(false)} className={isActive("/registration")}>
               Registration
             </Link>
           ) : (
-            <span
-              className="text-gray-500 cursor-not-allowed"
-              title="Registration Closed!"
-            >
-              Registration
-            </span>
+            <span className="text-gray-500 cursor-not-allowed">Registration</span>
           )}
 
-          {isAdmin ? (
+          {/* Admin Mobile Menu */}
+          {isAdmin && (
             <>
-              <Link
-                to="/pending-approval"
-                className="hover:text-yellow-400 transition"
-                onClick={() => setMenuOpen(false)}
-              >
+              <Link to="/create-team" onClick={() => setMenuOpen(false)} className={isActive("/create-team")}>
+                Teams
+              </Link>
+              <Link to="/pending-approval" onClick={() => setMenuOpen(false)} className={isActive("/pending-approval")}>
                 Pending Approval
               </Link>
               <button
@@ -161,15 +127,13 @@ export default function Header({ isAdmin, setIsAdmin }) {
                 }}
                 className="text-red-400 hover:text-red-500 transition"
               >
-                Logout (Admin)
+                Logout
               </button>
             </>
-          ) : (
-            <Link
-              to="/admin-login"
-              className="hover:text-yellow-400 transition"
-              onClick={() => setMenuOpen(false)}
-            >
+          )}
+
+          {!isAdmin && (
+            <Link to="/admin-login" onClick={() => setMenuOpen(false)} className={isActive("/admin-login")}>
               Admin Login
             </Link>
           )}

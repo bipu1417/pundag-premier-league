@@ -450,45 +450,69 @@ export default function AuctionManagerFull({ isAdmin }) {
                 </div>
 
                 {/* player mini list with animations */}
+                
+                {/* player mini list with expand on hover */}
                 <div className="mt-3 space-y-2">
+
                   {g.assignments.length === 0 ? (
                     <div className="text-gray-400 text-sm">No players.</div>
                   ) : (
-                    g.assignments.map((a) => (
-                      <div
-                        key={a.id}
-                        className="bg-gray-900 p-2 rounded-md flex items-center justify-between gap-3 transform transition hover:-translate-y-1"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-sm text-yellow-300 overflow-hidden">
-                            {/* player initials */}
-                            {a.player?.name ? a.player.name.split(" ").map(n=>n[0]).slice(0,2).join("") : "P"}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium">{a.player?.name || "Unknown"}</div>
-                            <div className="text-xs text-gray-400">₹ {a.auctionPrice}</div>
-                          </div>
-                        </div>
+                    <div
+                      className="
+                        group
+                        max-h-[120px] 
+                        overflow-hidden 
+                        hover:max-h-[900px] 
+                        transition-all 
+                        duration-500
+                        ease-in-out
+                      "
+                    >
+                      {g.assignments.map((a, index) => (
+                        <div
+                          key={a.id}
+                          className={`
+                            bg-gray-900 p-2 rounded-md flex items-center justify-between gap-3 
+                            transform transition hover:-translate-y-1
+                            ${index > 1 ? "opacity-0 group-hover:opacity-100 transition-opacity duration-500" : ""}
+                          `}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-sm text-yellow-300 overflow-hidden">
+                              {a.player?.name
+                                ? a.player.name.split(" ").map(n => n[0]).slice(0, 2).join("")
+                                : "P"}
+                            </div>
 
-                        {isAdmin && 
-                          <> 
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => openEdit(a)}
-                                    className="text-blue-400 text-sm hover:underline"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleRemove(a.id)}
-                                    className="text-red-400 text-sm hover:underline"
-                                  >
-                                    Remove
-                                  </button>
-                                </div> 
-                          </>}
-                      </div>
-                    ))
+                            <div>
+                              <div className="text-sm font-medium">
+                                {a.player?.name || "Unknown"}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                ₹ {a.auctionPrice}
+                              </div>
+                            </div>
+                          </div>
+
+                          {isAdmin && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => openEdit(a)}
+                                className="text-blue-400 text-sm hover:underline"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleRemove(a.id)}
+                                className="text-red-400 text-sm hover:underline"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

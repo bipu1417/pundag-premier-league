@@ -238,11 +238,11 @@ const endDate = React.useMemo(() => new Date(2025, 10, 26, 16, 59, 59), []);
             <div className="whitespace-nowrap animate-scroll text-yellow-300 font-bold text-lg sm:text-xl flex items-center gap-1">
               <span className="flex items-center gap-2">
                 {/* <span className="text-yellow-300 animate-beep bg-amber-600">Auction</span> */}
-                🏏 তৈরি হয়ে যান — উত্তেজনা আরও বাড়তে চলেছে! ৭ই ডিসেম্বর ২০২৫ - এ হচ্ছে জমজমাট Auction!
+                🎉 অপেক্ষার অবসান! শুরু হতে চলেছে বহু প্রতীক্ষিত ম্যাচ ডে — রোমাঞ্চ, লড়াই আর ক্রিকেটের পূর্ণ উন্মাদনা!
               </span>
               <span className="flex items-center gap-2">
                 {/* <span className="text-yellow-300 animate-beep bg-amber-600">Auction </span> */}
-                🏏 Get ready — the excitement continues as the Auction goes live on 7th December 2025 
+                ⚡ Cricket madness returns to the field — don’t miss the electrifying Match Day! 
               </span>
 
             </div>

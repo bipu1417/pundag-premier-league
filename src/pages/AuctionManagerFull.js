@@ -521,7 +521,7 @@ export default function AuctionManagerFull({ isAdmin }) {
         </div>
 
         {/* Detailed Assignment Table */}
-        { isAdmin && <>
+         <>
             <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 mt-6">
               <h3 className="text-lg font-bold text-yellow-400 mb-3">Assignments</h3>
 
@@ -533,7 +533,7 @@ export default function AuctionManagerFull({ isAdmin }) {
                       <th className="py-2 px-2">Team</th>
                       <th className="py-2 px-2">Price</th>
                       <th className="py-2 px-2">Assigned At</th>
-                      <th className="py-2 px-2">Actions</th>
+                      { isAdmin && <th className="py-2 px-2">Actions</th> }
                     </tr>
                   </thead>
                   <tbody>
@@ -545,17 +545,17 @@ export default function AuctionManagerFull({ isAdmin }) {
                         <td className="py-2 px-2 text-sm text-gray-400">
                           {a.createdAt?.toDate ? a.createdAt.toDate().toLocaleString() : "-"}
                         </td>
-                        <td className="py-2 px-2 space-x-2">
+                        { isAdmin && <td className="py-2 px-2 space-x-2">
                           <button onClick={() => openEdit(a)} className="text-blue-400 hover:underline text-sm">Edit</button>
                           <button onClick={() => handleRemove(a.id)} className="text-red-400 hover:underline text-sm">Remove</button>
-                        </td>
+                        </td> }
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-        </>}
+        </>
         
 
         {/* Edit Modal (simple inline) */}

@@ -14,6 +14,7 @@ import {
   onSnapshot,
   doc
 } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 import { getStorage } from "firebase/storage"; // ✅ FIXED: Added storage
 
@@ -32,6 +33,9 @@ const app = initializeApp(firebaseConfig);
 
 // Firestore
 export const db = getFirestore(app);
+
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
 
 // Storage
 export const storage = getStorage(app);  // ✅ FIXED: Now available

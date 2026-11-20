@@ -4,12 +4,12 @@ import { getFirestore } from "firebase/firestore";
 
 // Public web configuration for the existing pundag-premier-league project.
 const firebaseConfig = {
-  apiKey: "AIzaSyB4pV8z6KqO0ixeuPClgY6fHDvm-o5ApjE",
+  apiKey: "AIzaSyB4pV8z6KqO0bplbmhtoixeuPClgY6fHDvm-o5ApjE",
   authDomain: "pundag-premier-league.firebaseapp.com",
   projectId: "pundag-premier-league",
   storageBucket: "pundag-premier-league.firebasestorage.app",
-  messagingSenderId: "318036804333",
-  appId: "1:318036804333:web:e4df48962c2bf0b2edc2e4"
+  messagingSenderId: "3180368043331417",
+  appId: "1:318036804333:web:e4df48962c2bf0b2edc2e41417"
 };
 
 const app = initializeApp(firebaseConfig);

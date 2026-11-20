@@ -1,31 +1,26 @@
 {
-  "name": "ppl-team-reveal",
+  "name": "leaguecraft",
   "version": "1.0.0",
   "private": true,
   "dependencies": {
     "autoprefixer": "^10.4.20",
-    "axios": "^1.13.2",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "file-saver": "^2.0.5",
-    "firebase": "^12.6.0",
-    "firebase-admin": "^13.6.0",
+    "firebase": "^12.19.0",
     "framer-motion": "^11.2.10",
     "lucide-react": "^0.553.0",
-    "postcss": "^8.4.47",
+    "postcss": "^8.5.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-qr-code": "^2.0.18",
-    "react-router-dom": "^7.9.5",
+    "react-router-dom": "^6.30.3",
     "react-scripts": "5.0.1",
-    "sweetalert2": "^11.26.3",
-    "tailwindcss": "^3.4.13",
-    "xlsx": "^0.18.5"
+    "tailwindcss": "^3.4.13"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "postbuild": "node scripts/build-seo.cjs",
+    "configure:anonymous-auth": "node scripts/configure-anonymous-auth.cjs",
+    "sync:public-tournaments": "node scripts/backfill-public-tournaments.cjs",
+    "deploy": "npm run build && npx firebase deploy --only hosting --project leaguecraft-aux",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -47,12 +42,12 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "firebase-tools": "^14.24.2"
-  },
   "description": "This project was bootstrapped with Create React App.",
   "main": "postcss.config.js",
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "firebase-tools": "^15.34.1"
+  }
 }

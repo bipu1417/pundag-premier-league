@@ -1,0 +1,492 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasAccount() {
+      return signedIn()
+        && request.auth.token.get("firebase", {}).get("sign_in_provider", "") != "anonymous";
+    }
+
+    function isOwner(userId) {
+      return hasAccount() && request.auth.uid == userId;
+    }
+
+    function isCreator() {
+      return signedIn() && request.auth.token.email == "desiindianboyz@gmail.com";
+    }
+
+    function currentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasPremiumAccess() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && (
+          isCreator()
+          || currentUser().role == "platformAdmin"
+          || (
+            currentUser().subscription.status == "active"
+            && currentUser().subscription.paymentStatus == "paid"
+            && currentUser().subscription.validUntil > request.time
+          )
+        );
+    }
+
+    function isPlatformAdministrator() {
+      return signedIn()
+        && (
+          isCreator()
+          || (
+            exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && currentUser().get("role", "user") == "platformAdmin"
+          )
+        );
+    }
+
+    function ownsIndexedTournament(tournamentId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/tournaments/$(tournamentId))
+        && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.ownerId == request.auth.uid;
+    }
+
+    function ownsYearTournament(year, tournamentId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/years/$(year)/tournaments/$(tournamentId))
+        && get(/databases/$(database)/documents/years/$(year)/tournaments/$(tournamentId)).data.ownerId == request.auth.uid;
+    }
+
+    function canManageIndexedTournament(tournamentId) {
+      return hasPremiumAccess() && ownsIndexedTournament(tournamentId);
+    }
+
+    function canManageYearTournament(year, tournamentId) {
+      return hasPremiumAccess() && ownsYearTournament(year, tournamentId);
+    }
+
+    // Tournament details remain editable through the existing registration deadline.
+    // The stored deadline is used so an expired tournament cannot be reopened by an edit.
+    function canEditIndexedTournament(tournamentId) {
+      let tournament = get(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
+      return signedIn()
+        && exists(/databases/$(database)/documents/tournaments/$(tournamentId))
+        && request.time <= tournament.registrationEndAt
+        && (tournament.ownerId == request.auth.uid || isPlatformAdministrator());
+    }
+
+    function canEditYearTournament(year, tournamentId) {
+      let tournament = get(/databases/$(database)/documents/years/$(year)/tournaments/$(tournamentId)).data;
+      return signedIn()
+        && exists(/databases/$(database)/documents/years/$(year)/tournaments/$(tournamentId))
+        && request.time <= tournament.registrationEndAt
+        && (tournament.ownerId == request.auth.uid || isPlatformAdministrator());
+    }
+
+    function createsFreeUser(userId) {
+      return isOwner(userId)
+        && request.resource.data.role == "user"
+        && request.resource.data.subscription.status == "inactive"
+        && request.resource.data.subscription.paymentStatus == "unpaid";
+    }
+
+    function submitsOwnSubscriptionRequest(userId) {
+      return isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["email", "role", "subscription", "updatedAt"])
+        && request.resource.data.role == "user"
+        && request.resource.data.subscription.status == "pending"
+        && request.resource.data.subscription.paymentStatus == "pending"
+        && request.resource.data.subscription.paymentRefNo is string
+        && request.resource.data.subscription.paymentRefNo.size() >= 6;
+    }
+
+    // Capacity is authoritative on the tournament index document.
+    function tournamentIndex(tournamentId) {
+      return get(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
+    }
+
+    function capacityEnabled(tournamentId) {
+      return tournamentIndex(tournamentId).get("capacityVersion", 0) == 1;
+    }
+
+    function registeredPlayers(data) {
+      return data.get("approvedPlayerCount", data.get("registeredPlayerCount", 0));
+    }
+
+    function validCapacityShape(data) {
+      return data.capacityVersion == 1
+        && data.maxTeams is int && data.maxTeams >= 2
+        && data.maxPlayers is int && data.maxPlayers > 0
+        && data.groupCount is int && data.groupCount > 0
+        && data.groupCount * 2 <= data.maxTeams
+        && data.registeredPlayerCount is int && data.teamCount is int
+        && data.registeredPlayerCount >= 0
+        && registeredPlayers(data) is int && registeredPlayers(data) >= 0 && registeredPlayers(data) <= data.maxPlayers
+        && data.teamCount >= 0 && data.teamCount <= data.maxTeams
+        && data.registrationStartAt is timestamp
+        && data.registrationEndAt is timestamp
+        && data.registrationEndAt > data.registrationStartAt;
+    }
+
+    function validCapacitySettings(data) {
+      return validCapacityShape(data)
+        && data.registeredPlayerCount == 0 && registeredPlayers(data) == 0 && data.teamCount == 0;
+    }
+
+    function validPublicTournament(data) {
+      return data.keys().hasOnly([
+          "name", "sport", "year", "registrationStart", "registrationEnd",
+          "maxTeams", "maxPlayers", "groupCount", "teamCount", "registeredPlayerCount", "approvedPlayerCount",
+          "winnerPrize", "runnerUpPrize", "auctionEnabled", "status"
+        ])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 120
+        && data.sport is string && data.sport.size() > 0 && data.sport.size() <= 60
+        && data.year is int
+        && data.registrationStart is string && data.registrationEnd is string
+        && data.maxTeams is int && data.maxTeams >= 0
+        && data.maxPlayers is int && data.maxPlayers >= 0
+        && data.groupCount is int && data.groupCount >= 0
+        && data.teamCount is int && data.teamCount >= 0
+        && data.registeredPlayerCount is int && data.registeredPlayerCount >= 0
+        && registeredPlayers(data) is int && registeredPlayers(data) >= 0
+        && data.winnerPrize is number && data.winnerPrize >= 0
+        && data.runnerUpPrize is number && data.runnerUpPrize >= 0
+        && data.auctionEnabled is bool
+        && data.status is string && data.status.size() <= 30;
+    }
+
+    function matchesPrivateTournament(tournamentId, data) {
+      let source = getAfter(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
+      return existsAfter(/databases/$(database)/documents/tournaments/$(tournamentId))
+        && data.name == source.get("name", "Tournament")
+        && data.sport == source.get("sport", "Sports")
+        && data.year == source.year
+        && data.registrationStart == source.get("registrationStart", "")
+        && data.registrationEnd == source.get("registrationEnd", "")
+        && data.maxTeams == source.get("maxTeams", 0)
+        && data.maxPlayers == source.get("maxPlayers", 0)
+        && data.groupCount == source.get("groupCount", 0)
+        && data.teamCount == source.get("teamCount", 0)
+        && data.registeredPlayerCount == source.get("registeredPlayerCount", 0)
+        && data.get("approvedPlayerCount", -1) == source.get("approvedPlayerCount", -1)
+        && data.winnerPrize == source.get("winnerPrize", 0)
+        && data.runnerUpPrize == source.get("runnerUpPrize", 0)
+        && data.auctionEnabled == source.get("auctionEnabled", false)
+        && data.status == source.get("status", "draft");
+    }
+
+    function validPublicRegistrationConfig(data) {
+      return data.keys().hasOnly(["upiId", "paymentQr"])
+        && data.upiId is string && data.upiId.size() > 0 && data.upiId.size() <= 100
+        && data.paymentQr is string && data.paymentQr.size() > 0 && data.paymentQr.size() <= 800000;
+    }
+
+    function matchesPrivateRegistrationConfig(tournamentId, data) {
+      let source = getAfter(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
+      return existsAfter(/databases/$(database)/documents/tournaments/$(tournamentId))
+        && data.upiId == source.get("upiId", "")
+        && data.paymentQr == source.get("paymentQr", "");
+    }
+
+    function validManagedTournamentUpdate(before, after) {
+      return validCapacityShape(after)
+        && after.ownerId == before.ownerId
+        && after.ownerEmail == before.ownerEmail
+        && after.year == before.year
+        && after.capacityVersion == before.capacityVersion
+        && after.registeredPlayerCount == before.registeredPlayerCount
+        && after.get("approvedPlayerCount", -1) == before.get("approvedPlayerCount", -1)
+        && after.teamCount == before.teamCount
+        && after.get("lastRegistrationId", "") == before.get("lastRegistrationId", "")
+        && after.get("lastReleasedRegistrationId", "") == before.get("lastReleasedRegistrationId", "")
+        && after.get("lastTeamId", "") == before.get("lastTeamId", "")
+        && after.get("lastDeletedTeamId", "") == before.get("lastDeletedTeamId", "")
+        && after.name is string && after.name.size() > 0 && after.name.size() <= 120
+        && after.sport is string && after.sport.size() > 0 && after.sport.size() <= 60
+        && after.ownerPhone is string && after.ownerPhone.size() <= 40
+        && after.upiId is string && after.upiId.size() <= 100
+        && after.paymentQr is string && after.paymentQr.size() <= 800000
+        && after.winnerPrize is number && after.winnerPrize >= 0
+        && after.runnerUpPrize is number && after.runnerUpPrize >= 0
+        && after.auctionEnabled is bool
+        && after.registrationStart is string && after.registrationEnd is string
+        && after.updatedAt == request.time
+        && after.diff(before).affectedKeys().hasOnly([
+          "name", "sport", "ownerPhone", "maxTeams", "maxPlayers", "groupCount",
+          "registrationStartAt", "registrationEndAt", "registrationStart", "registrationEnd",
+          "winnerPrize", "runnerUpPrize", "upiId", "paymentQr", "auctionEnabled", "updatedAt"
+        ]);
+    }
+
+    // All views must observe the same capacity after a counted operation.
+    function capacityMirrorsMatch(tournamentId, data) {
+      let publicData = getAfter(/databases/$(database)/documents/publicTournaments/$(tournamentId)).data;
+      let yearlyData = getAfter(/databases/$(database)/documents/years/$(string(data.year))/tournaments/$(tournamentId)).data;
+      return publicData.registeredPlayerCount == data.registeredPlayerCount
+        && publicData.get("approvedPlayerCount", -1) == data.get("approvedPlayerCount", -1)
+        && yearlyData.get("approvedPlayerCount", -1) == data.get("approvedPlayerCount", -1)
+        && publicData.teamCount == data.teamCount
+        && yearlyData.registeredPlayerCount == data.registeredPlayerCount
+        && yearlyData.teamCount == data.teamCount;
+    }
+
+    function validCapacityMirrorUpdate(tournamentId, before, after) {
+      let source = getAfter(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
+      return source.get("capacityVersion", 0) == 1
+        && after.diff(before).affectedKeys().hasOnly([
+          "registeredPlayerCount", "approvedPlayerCount", "teamCount", "lastRegistrationId",
+          "lastReleasedRegistrationId", "lastTeamId", "lastDeletedTeamId"
+        ])
+        && after.diff(source).affectedKeys().hasOnly(["indexId"]);
+    }
+
+    function reservesPlayer(tournamentId) {
+      let before = resource.data;
+      let after = request.resource.data;
+      let pending = /databases/$(database)/documents/years/$(string(before.year))/tournaments/$(tournamentId)/pendingPlayers/$(after.get("lastRegistrationId", "_"));
+      let approved = /databases/$(database)/documents/years/$(string(before.year))/tournaments/$(tournamentId)/players/$(after.get("lastRegistrationId", "_"));
+      return canManageIndexedTournament(tournamentId) && before.get("capacityVersion", 0) == 1
+        && after.diff(before).affectedKeys().hasOnly(["registeredPlayerCount", "approvedPlayerCount", "lastRegistrationId"])
+        && after.registeredPlayerCount == before.registeredPlayerCount + 1
+        && registeredPlayers(after) == registeredPlayers(before) + 1
+        && registeredPlayers(after) <= before.maxPlayers
+        && exists(pending) && !existsAfter(pending)
+        && !exists(approved) && existsAfter(approved)
+        && capacityMirrorsMatch(tournamentId, after);
+    }
+
+    function changesTeamCount(tournamentId, creating) {
+      let before = resource.data;
+      let after = request.resource.data;
+      let teamId = creating ? after.get("lastTeamId", "_") : after.get("lastDeletedTeamId", "_");
+      let team = /databases/$(database)/documents/years/$(string(before.year))/tournaments/$(tournamentId)/teamdetails/$(teamId);
+      return canManageIndexedTournament(tournamentId) && before.get("capacityVersion", 0) == 1
+        && after.diff(before).affectedKeys().hasOnly(creating ? ["teamCount", "lastTeamId"] : ["teamCount", "lastDeletedTeamId"])
+        && after.teamCount == before.teamCount + (creating ? 1 : -1)
+        && after.teamCount >= 0 && after.teamCount <= before.maxTeams
+        && (creating ? (!exists(team) && existsAfter(team)) : (exists(team) && !existsAfter(team)))
+        && capacityMirrorsMatch(tournamentId, after);
+    }
+
+    function playerPlaceReserved(tournamentId, playerId) {
+      let before = tournamentIndex(tournamentId);
+      let after = getAfter(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
+      return after.registeredPlayerCount == before.registeredPlayerCount + 1
+        && after.lastRegistrationId == playerId;
+    }
+
+    function teamCountChanged(tournamentId, teamId, creating) {
+      let before = tournamentIndex(tournamentId);
+      let after = getAfter(/databases/$(database)/documents/tournaments/$(tournamentId)).data;
+      return after.teamCount == before.teamCount + (creating ? 1 : -1)
+        && (creating ? after.lastTeamId == teamId : after.lastDeletedTeamId == teamId);
+    }
+
+    match /users/{userId} {
+      allow create: if createsFreeUser(userId);
+      allow read: if isOwner(userId) || isCreator();
+      allow update: if submitsOwnSubscriptionRequest(userId) || isCreator();
+      allow delete: if isCreator();
+    }
+
+    match /subscriptionRequests/{requestId} {
+      allow create: if hasAccount()
+        && requestId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userEmail == request.auth.token.email
+        && request.resource.data.status == "pending"
+        && request.resource.data.paymentStatus == "pending"
+        && request.resource.data.paymentRefNo is string
+        && request.resource.data.paymentRefNo.size() >= 6;
+      allow read: if isCreator() || (hasAccount() && resource.data.userId == request.auth.uid);
+      allow update: if isCreator()
+        || (
+          hasAccount()
+          && requestId == request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.userEmail == request.auth.token.email
+          && request.resource.data.status == "pending"
+          && request.resource.data.paymentStatus == "pending"
+          && request.resource.data.paymentRefNo is string
+          && request.resource.data.paymentRefNo.size() >= 6
+        );
+      allow delete: if isCreator();
+    }
+
+    match /notificationRequests/{notificationId} {
+      allow create: if signedIn();
+      allow read: if isCreator()
+        || (
+          signedIn()
+          && (
+            resource.data.recipientUserId == request.auth.uid
+            || resource.data.senderId == request.auth.uid
+          )
+        );
+      allow update, delete: if isCreator();
+    }
+
+    match /tournaments/{tournamentId} {
+      allow read: if hasAccount();
+      allow create: if hasPremiumAccess() && request.resource.data.ownerId == request.auth.uid
+        && validCapacitySettings(request.resource.data);
+      // Dispatch once so denied operations do not evaluate every expensive branch.
+      function validIndexUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return changed.hasOnly(["registeredPlayerCount", "approvedPlayerCount", "lastRegistrationId"])
+          ? reservesPlayer(tournamentId)
+          : changed.hasOnly(["teamCount", "lastTeamId"])
+            ? changesTeamCount(tournamentId, true)
+            : changed.hasOnly(["teamCount", "lastDeletedTeamId"])
+              ? changesTeamCount(tournamentId, false)
+              : canEditIndexedTournament(tournamentId)
+                && validManagedTournamentUpdate(resource.data, request.resource.data)
+                && request.resource.data.diff(getAfter(/databases/$(database)/documents/years/$(string(resource.data.year))/tournaments/$(tournamentId)).data).affectedKeys().hasOnly(["indexId"]);
+      }
+      allow update: if validIndexUpdate();
+      allow delete: if canManageIndexedTournament(tournamentId)
+        && (resource.data.get("capacityVersion", 0) != 1 || (registeredPlayers(resource.data) == 0 && resource.data.teamCount == 0));
+    }
+
+    // Sanitized public mirror. It deliberately excludes owner contact details,
+    // UPI IDs, payment QR images, counter linkage IDs and private registrations.
+    match /publicTournaments/{tournamentId} {
+      allow get, list: if true;
+      allow create, update: if signedIn()
+        && validPublicTournament(request.resource.data)
+        && matchesPrivateTournament(tournamentId, request.resource.data);
+      allow delete: if signedIn()
+        && !existsAfter(/databases/$(database)/documents/tournaments/$(tournamentId));
+    }
+
+    // Registration payment instructions require a Firebase identity, including
+    // the invisible anonymous identity used by visitors who do not log in.
+    match /publicRegistrationConfigs/{tournamentId} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn()
+        && validPublicRegistrationConfig(request.resource.data)
+        && matchesPrivateRegistrationConfig(tournamentId, request.resource.data);
+      allow delete: if signedIn()
+        && !existsAfter(/databases/$(database)/documents/tournaments/$(tournamentId));
+    }
+
+    // About content is separate from private tournament registration/payment data.
+    // A premium subscriber is not an administrator of someone else's tournament.
+    match /tournamentAbout/{tournamentId} {
+      function canEditAbout() {
+        return signedIn() && (
+          isCreator()
+          || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && currentUser().get("role", "user") == "platformAdmin")
+          || ownsIndexedTournament(tournamentId)
+        );
+      }
+      function validAbout() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(["intro", "sections", "revision", "updatedAt", "updatedBy"])
+          && data.intro is string && data.intro.size() <= 2000
+          && data.sections is list && data.sections.size() <= 20
+          && data.revision is int && data.revision > 0
+          && data.updatedAt == request.time && data.updatedBy == request.auth.uid;
+      }
+      allow get: if true;
+      allow create: if canEditAbout() && validAbout() && request.resource.data.revision == 1;
+      allow update: if canEditAbout() && validAbout()
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if canEditAbout();
+    }
+
+    match /players/{playerId} {
+      allow read: if hasAccount();
+      allow create, update, delete: if isCreator();
+    }
+
+    match /teamdetails/{teamId} {
+      allow read: if hasAccount();
+      allow create, update, delete: if isCreator();
+    }
+
+    match /AuctionDetails/{auctionId} {
+      allow read: if hasAccount();
+      allow create, update, delete: if isCreator();
+    }
+
+    match /fixtures/{tournamentId} {
+      allow read: if hasAccount();
+      allow create, update, delete: if isPlatformAdministrator();
+    }
+
+    match /years/{year}/tournaments/{tournamentId} {
+      allow read: if hasAccount();
+      allow create: if hasPremiumAccess() && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.indexId == tournamentId
+        && string(request.resource.data.year) == year
+        && request.resource.data.diff(getAfter(/databases/$(database)/documents/tournaments/$(tournamentId)).data).affectedKeys().hasOnly(["indexId"]);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "registeredPlayerCount", "approvedPlayerCount", "teamCount", "lastRegistrationId", "lastReleasedRegistrationId", "lastTeamId", "lastDeletedTeamId"
+        ])
+        ? canManageYearTournament(year, tournamentId)
+          && validCapacityMirrorUpdate(tournamentId, resource.data, request.resource.data)
+        : canEditYearTournament(year, tournamentId)
+          && validManagedTournamentUpdate(resource.data, request.resource.data)
+          && request.resource.data.diff(getAfter(/databases/$(database)/documents/tournaments/$(tournamentId)).data).affectedKeys().hasOnly(["indexId"]);
+      allow delete: if canManageYearTournament(year, tournamentId);
+
+      match /players/{playerId} {
+        allow read: if hasAccount();
+        allow create: if canManageYearTournament(year, tournamentId)
+          && (!capacityEnabled(tournamentId) || (
+            exists(/databases/$(database)/documents/years/$(year)/tournaments/$(tournamentId)/pendingPlayers/$(playerId))
+            && !existsAfter(/databases/$(database)/documents/years/$(year)/tournaments/$(tournamentId)/pendingPlayers/$(playerId))
+            && playerPlaceReserved(tournamentId, playerId)
+            && request.resource.data.approved == true
+            && request.resource.data.diff(get(/databases/$(database)/documents/years/$(year)/tournaments/$(tournamentId)/pendingPlayers/$(playerId)).data).affectedKeys().hasOnly(["approved", "approvedAt"])
+          ));
+        allow update: if canManageYearTournament(year, tournamentId);
+        // Counted approved registrations retain their place.
+        allow delete: if canManageYearTournament(year, tournamentId) && !capacityEnabled(tournamentId);
+      }
+
+      match /pendingPlayers/{playerId} {
+        // Submission goes through the callable backend for atomic duplicate checks.
+        allow create: if false;
+        allow read, update: if canManageYearTournament(year, tournamentId);
+        allow delete: if canManageYearTournament(year, tournamentId);
+      }
+
+      match /teamdetails/{teamId} {
+        allow read: if hasAccount();
+        allow create: if canManageYearTournament(year, tournamentId)
+          && (!capacityEnabled(tournamentId) || (string(tournamentIndex(tournamentId).year) == year && teamCountChanged(tournamentId, teamId, true)));
+        allow update: if canManageYearTournament(year, tournamentId);
+        allow delete: if canManageYearTournament(year, tournamentId)
+          && (!capacityEnabled(tournamentId) || teamCountChanged(tournamentId, teamId, false));
+      }
+
+      match /AuctionDetails/{auctionId} {
+        allow read: if hasAccount();
+        allow create, update, delete: if canManageYearTournament(year, tournamentId);
+      }
+
+      match /fixtures/{fixtureId} {
+        allow read: if hasAccount();
+        allow create, update: if (canManageYearTournament(year, tournamentId) || isPlatformAdministrator())
+          && (!capacityEnabled(tournamentId) || (
+            request.resource.data.groupCount == tournamentIndex(tournamentId).groupCount
+            && tournamentIndex(tournamentId).teamCount >= tournamentIndex(tournamentId).groupCount * 2
+          ));
+        allow delete: if canManageYearTournament(year, tournamentId);
+      }
+
+      match /{subCollection}/{documentId} {
+        allow read: if hasAccount() && !(subCollection in ["pendingPlayers", "registrationIdentities"]);
+        allow create, update, delete: if canManageYearTournament(year, tournamentId)
+          && !(subCollection in ["players", "pendingPlayers", "registrationIdentities", "teamdetails", "fixtures"]);
+      }
+    }
+  }
+}

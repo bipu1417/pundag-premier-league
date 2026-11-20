@@ -1,27 +1,46 @@
 import React, { useEffect, useState } from "react";
 import { db, doc, getDoc } from "../firebase";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTournament } from "../context/TournamentContext";
 
 export default function PendingPlayerDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { activeTournament } = useTournament();
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchPlayer = async () => {
-      const ref = doc(db, "pendingPlayers", id);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        setPlayer({ id: snap.id, ...snap.data() });
+      if (!activeTournament) {
+        setPlayer(null);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        const ref = doc(db, "years", String(activeTournament.year), "tournaments", activeTournament.id, "pendingPlayers", id);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          setPlayer({ id: snap.id, ...snap.data() });
+        } else {
+          setPlayer(null);
+        }
+        setError("");
+      } catch (err) {
+        console.error("Unable to load pending player details:", err);
+        setError(err.code === "permission-denied" ? "You do not have permission to view this pending registration." : err.message);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchPlayer();
-  }, [id]);
+  }, [activeTournament, id]);
 
   if (loading) return <p className="text-center text-gray-300">Loading...</p>;
+  if (error) return <p className="text-center text-red-300">{error}</p>;
   if (!player) return <p className="text-center text-gray-400">Player not found</p>;
 
   return (

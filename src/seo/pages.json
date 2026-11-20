@@ -1,0 +1,48 @@
+{
+  "/": {
+    "title": "Tournament Management & Player Auctions | LeagueCraft",
+    "description": "Organise sports tournaments with LeagueCraft. Manage player registrations, teams, player auctions, groups and fixtures in one tournament workspace.",
+    "heading": "Sports tournament management and player auctions",
+    "intro": "LeagueCraft brings tournament setup, player registration, teams, auctions and fixtures into one workspace for sports organisers. Explore the guides below to plan your next cricket or football competition.",
+    "sections": [
+      {"heading": "Plan your tournament before registrations open", "text": "Decide your sport, team capacity, registration dates and prizes. LeagueCraft lets organisers create tournaments and manage their registered players and teams. Tournament creation and organiser tools require an eligible subscription."},
+      {"heading": "Build teams and prepare match fixtures", "text": "Keep player registration and team allocation connected to your tournament. Use the auction tools when you want team owners to bid for players, then organise groups and fixtures for the competition."}
+    ]
+  },
+  "/cricket-tournament-management": {
+    "title": "Cricket Tournament Management Software | LeagueCraft",
+    "description": "Plan a cricket tournament with LeagueCraft: player registration, teams, player auctions, groups and fixtures, plus a practical organiser checklist.",
+    "heading": "Cricket tournament management for local leagues",
+    "intro": "A cricket tournament needs clear registration rules, complete squads and a workable match schedule. LeagueCraft helps organisers manage players, teams, auctions and fixtures in one tournament workspace.",
+    "sections": [
+      {"heading": "Set the format and registration window", "text": "Before opening entries, decide the number of teams, squad size, overs per match and player eligibility. Publish your registration deadline and entry conditions so players know what is required. In LeagueCraft, create the tournament with registration dates and prize details, then manage the player list from the workspace."},
+      {"heading": "Choose how to build your cricket teams", "text": "For an auction league, agree on team budgets, squad limits and bidding rules before the first player is called. Register players and prepare the team list before starting the auction. For an existing club competition, confirm the participating teams and their squads before preparing fixtures."},
+      {"heading": "Prepare groups, fixtures and match-day rules", "text": "Choose a league or group stage followed by knockouts to suit your team count and available grounds. Allow time between matches and decide how rain delays, tied games and qualification will be handled. LeagueCraft includes group and fixture tools; organisers should confirm venues, officials and local competition rules separately."},
+      {"heading": "How do I start using LeagueCraft?", "text": "Create an account, review the subscription options and set up your tournament from the organiser workspace. Player registration, team management and auction screens require sign-in. Read the player auction guide before running an auction-based cricket league."}
+    ]
+  },
+  "/football-tournament-organiser": {
+    "title": "Football Tournament Organisation Guide | LeagueCraft",
+    "description": "Learn how to organise a football tournament: choose a format, confirm teams, plan groups and fixtures, and prepare match-day rules with LeagueCraft.",
+    "heading": "How to organise a football tournament",
+    "intro": "Start a football tournament by deciding the playing format, team count, venue capacity and competition rules. LeagueCraft provides a general tournament workspace with a configurable sport, team management, groups and fixtures.",
+    "sections": [
+      {"heading": "Choose your playing format and team capacity", "text": "Decide whether you are organising five-a-side, seven-a-side or eleven-a-side football. Confirm pitch availability, match length, squad limits and rest time before accepting teams. Record your tournament as Football in LeagueCraft and set the registration window for participants."},
+      {"heading": "Decide between groups and knockout matches", "text": "A straight knockout needs fewer matches, while groups give each team more opportunities to play. For example, eight teams split into two groups of four require twelve group matches if every team plays its group opponents once. Add semi-finals and a final when estimating pitch time."},
+      {"heading": "Publish football-specific rules separately", "text": "Agree on points for a win and draw, group tie-breakers, substitutions, disciplinary rules and the method for deciding a drawn knockout match. Share these rules with team captains before kickoff. The general tournament tools do not replace football-specific officiating or competition rules."},
+      {"heading": "Keep teams and fixtures organised", "text": "Confirm team names and player eligibility before generating your schedule. Use the team and fixture workspace after signing in, then check that the schedule fits the pitch bookings and referee availability. Tournament creation requires an eligible organiser subscription."}
+    ]
+  },
+  "/player-auction-software": {
+    "title": "Player Auction Software for Sports Leagues | LeagueCraft",
+    "description": "Organise a sports player auction with LeagueCraft. Prepare players and teams, manage bidding and follow the auction through the live auction dashboard.",
+    "heading": "Player auction software for sports tournaments",
+    "intro": "A player auction lets team owners build squads by bidding for registered players. LeagueCraft connects tournament registration, team management, the auction manager and a live auction dashboard in one workspace.",
+    "sections": [
+      {"heading": "Prepare players and teams before bidding", "text": "Complete player registration and check the eligible player list. Confirm the participating teams, available budgets, minimum bids and squad limits before starting. Tell owners how unsold players and interrupted bidding will be handled so the auction can proceed consistently."},
+      {"heading": "Run the auction from the tournament workspace", "text": "Create or select your tournament, enable its auction utility and prepare the team list. Sign in to use the auction manager and record the auction outcomes. The live auction dashboard gives signed-in viewers a dedicated screen for following the auction."},
+      {"heading": "Use a clear bidding process", "text": "Call one player at a time, announce the current bid clearly and confirm the winning team before moving to the next player. Pause if there is a disputed bid. Review team squads and remaining budgets throughout the session rather than waiting until the auction ends."},
+      {"heading": "What do organisers need to get started?", "text": "You need a LeagueCraft account, access to a tournament and the appropriate organiser permissions. Tournament creation and organiser tools require an eligible subscription. Review the available plans inside your account before committing to an event; do not assume all features are free."}
+    ]
+  }
+}

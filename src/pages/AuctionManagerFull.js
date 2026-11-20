@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Radio } from "lucide-react";
 import {
-  collection,
   addDoc,
   doc,
   deleteDoc,
@@ -9,23 +10,30 @@ import {
   updateDoc,
   onSnapshot,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useTournament } from "../context/TournamentContext";
+import { getDataCollection, getTournamentCollection } from "../utils/tournamentData";
+import { getTeamPurse } from "../utils/teamUtils";
+import { ConfirmModal } from "../components/ui/AppModal";
 
 /**
  * AuctionManagerFull
  *
  * Collections:
  *  - registeredPlayers
- *  - teamdetails  (should contain teamName, logoBase64 (optional), purse (optional))
+ *  - teamdetails  (should contain teamName, logoBase64 (optional), teamPurse)
  *  - AuctionDetails (playerId, teamName, auctionPrice, createdAt)
  *
  * NOTE: Ensure your firebase exports `db` correctly.
  */
 
-const DEFAULT_PURSE = 11000; // fallback if team.purse absent
+const DEFAULT_PURSE = 0;
 
-export default function AuctionManagerFull({ isAdmin }) {
+export default function AuctionManagerFull() {
+  const { activeTournament, canManageActiveTournament } = useTournament();
+  const canManageAuction = canManageActiveTournament;
   // raw data
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -44,46 +52,86 @@ export default function AuctionManagerFull({ isAdmin }) {
   // edit modal
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [editingPrice, setEditingPrice] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   // errors / messages
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
+  const requestConfirmation = (dialog) =>
+    new Promise((resolve) => {
+      setConfirmDialog({
+        ...dialog,
+        onConfirm: () => {
+          setConfirmDialog(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          setConfirmDialog(null);
+          resolve(false);
+        },
+      });
+    });
+
   // --- realtime listeners ---
   useEffect(() => {
+    if (!activeTournament) return undefined;
+
     const q = query(
-      collection(db, "players"),
+      getDataCollection(activeTournament, "players"),
       orderBy("name", "asc")   // 🔥 Sort alphabetically
       );
 
-    const unsubPlayers = onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setPlayers(list);
-    });
+    const handleSnapshotError = (err) => {
+      console.error("Auction data listener error:", err);
+      setError(err.code === "permission-denied"
+        ? "You do not have permission to load auction data."
+        : err.message);
+    };
+
+    const unsubPlayers = onSnapshot(
+      q,
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setPlayers(list);
+      },
+      handleSnapshotError
+    );
     // const unsubPlayers = onSnapshot(collection(db, "players"), (snap) => {
     //   const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     //   setPlayers(list);
     // });
 
-    const unsubTeams = onSnapshot(collection(db, "teamdetails"), (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setTeams(list);
-    });
+    const unsubTeams = onSnapshot(
+      getDataCollection(activeTournament, "teamdetails"),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setTeams(list);
+      },
+      handleSnapshotError
+    );
 
-    const unsubAssignments = onSnapshot(collection(db, "AuctionDetails"), (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setAssignments(list);
-    });
+    const unsubAssignments = onSnapshot(
+      getDataCollection(activeTournament, "AuctionDetails"),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setAssignments(list);
+      },
+      handleSnapshotError
+    );
 
     return () => {
       unsubPlayers();
       unsubTeams();
       unsubAssignments();
     };
-  }, []);
+  }, [activeTournament]);
 
   // Helper: get player by id
-  const getPlayer = (id) => players.find((p) => p.id === id) || { id, name: "Unknown" };
+  const getPlayer = useCallback(
+    (id) => players.find((p) => p.id === id) || { id, name: "Unknown" },
+    [players]
+  );
 
   // Prevent duplicate assignment
   const isPlayerAssigned = (playerId) =>
@@ -94,7 +142,7 @@ export default function AuctionManagerFull({ isAdmin }) {
     // map teamName -> { team, assigned:[], totalSpent, purse, remaining }
     const map = {};
     teams.forEach((t) => {
-      const purse = typeof t.purse === "number" ? t.purse : DEFAULT_PURSE;
+      const purse = getTeamPurse(t, DEFAULT_PURSE);
       map[t.teamName] = { team: t, assigned: [], totalSpent: 0, purse, remaining: purse };
     });
 
@@ -122,6 +170,11 @@ export default function AuctionManagerFull({ isAdmin }) {
     setError("");
     setInfo("");
 
+    if (!canManageAuction) {
+      setError("Only the tournament creator with an active paid subscription can manage this auction.");
+      return;
+    }
+
     if (!selectedPlayer || !selectedTeam || !auctionPrice) {
       setError("Please select player, team and provide auction price.");
       return;
@@ -137,17 +190,22 @@ export default function AuctionManagerFull({ isAdmin }) {
     const priceNum = Number(auctionPrice);
     if (teamEntry && teamEntry.remaining - priceNum < 0) {
       // not enough funds
-      const proceed = window.confirm(
-        `Team "${selectedTeam}" doesn't have enough purse remaining (remaining: ${teamEntry.remaining}). Proceed?`
-      );
+      const proceed = await requestConfirmation({
+        title: "Purse limit exceeded",
+        message: `Team "${selectedTeam}" does not have enough purse remaining. Remaining: ${teamEntry.remaining}. Do you still want to assign this player?`,
+        confirmText: "Assign Anyway",
+        tone: "warning",
+      });
       if (!proceed) return;
     }
 
     try {
-      await addDoc(collection(db, "AuctionDetails"), {
+      await addDoc(getTournamentCollection(activeTournament.year, activeTournament.id, "AuctionDetails"), {
         playerId: selectedPlayer,
         teamName: selectedTeam,
         auctionPrice: priceNum,
+        tournamentId: activeTournament.id,
+        tournamentYear: activeTournament.year,
         createdAt: serverTimestamp(),
       });
       setInfo("Player assigned successfully.");
@@ -161,11 +219,58 @@ export default function AuctionManagerFull({ isAdmin }) {
     }
   };
 
+  const handleMarkUnsold = async () => {
+    setError("");
+    setInfo("");
+    if (!canManageAuction) {
+      setError("Only the tournament creator with an active paid subscription can manage this auction.");
+      return;
+    }
+    if (!selectedPlayer) {
+      setError("Select a player to mark as unsold.");
+      return;
+    }
+    if (isPlayerAssigned(selectedPlayer)) {
+      setError("A sold player cannot be marked unsold.");
+      return;
+    }
+    try {
+      await setDoc(
+        doc(db, "years", String(activeTournament.year), "tournaments", activeTournament.id, "UnsoldDetails", selectedPlayer),
+        {
+          playerId: selectedPlayer,
+          status: "unsold",
+          tournamentId: activeTournament.id,
+          tournamentYear: activeTournament.year,
+          createdAt: serverTimestamp(),
+        }
+      );
+      setInfo("Player marked unsold. The live dashboard has been updated.");
+      setSelectedPlayer("");
+      setSelectedTeam("");
+      setAuctionPrice("");
+    } catch (err) {
+      console.error("Unsold update error:", err);
+      setError("Failed to mark player unsold.");
+    }
+  };
+
   // Remove (unassign)
   const handleRemove = async (assignmentId) => {
-    if (!window.confirm("Remove this player from team?")) return;
+    if (!canManageAuction) {
+      setError("Only the tournament creator with an active paid subscription can remove auction assignments.");
+      return;
+    }
+
+    const proceed = await requestConfirmation({
+      title: "Remove assignment?",
+      message: "This player will be removed from the selected team.",
+      confirmText: "Remove",
+      tone: "error",
+    });
+    if (!proceed) return;
     try {
-      await deleteDoc(doc(db, "AuctionDetails", assignmentId));
+      await deleteDoc(doc(db, "years", String(activeTournament.year), "tournaments", activeTournament.id, "AuctionDetails", assignmentId));
       setInfo("Player unassigned.");
     } catch (err) {
       console.error(err);
@@ -183,6 +288,11 @@ export default function AuctionManagerFull({ isAdmin }) {
   // Save edited price
   const saveEdit = async () => {
     if (!editingAssignment) return;
+    if (!canManageAuction) {
+      setError("Only the tournament creator with an active paid subscription can edit auction prices.");
+      return;
+    }
+
     const priceNum = Number(editingPrice);
     if (isNaN(priceNum) || priceNum < 0) {
       setError("Enter a valid price");
@@ -195,14 +305,17 @@ export default function AuctionManagerFull({ isAdmin }) {
     const oldPrice = Number(editingAssignment.auctionPrice || 0);
     const delta = priceNum - oldPrice; // additional money needed
     if (teamEntry && teamEntry.remaining - delta < 0) {
-      const proceed = window.confirm(
-        `Editing will exceed ${teamName} purse. Remaining: ${teamEntry.remaining}. Proceed?`
-      );
+      const proceed = await requestConfirmation({
+        title: "Purse limit exceeded",
+        message: `Editing will exceed ${teamName} purse. Remaining: ${teamEntry.remaining}. Do you still want to save this price?`,
+        confirmText: "Save Anyway",
+        tone: "warning",
+      });
       if (!proceed) return;
     }
 
     try {
-      await updateDoc(doc(db, "AuctionDetails", editingAssignment.id), {
+      await updateDoc(doc(db, "years", String(activeTournament.year), "tournaments", activeTournament.id, "AuctionDetails", editingAssignment.id), {
         auctionPrice: priceNum,
         updatedAt: serverTimestamp(),
       });
@@ -261,7 +374,7 @@ export default function AuctionManagerFull({ isAdmin }) {
     }
 
     return list;
-  }, [assignments, players, search, filterTeam, sortBy]);
+  }, [assignments, getPlayer, search, filterTeam, sortBy]);
 
   // Group by team for live dashboard
   const groupedByTeam = useMemo(() => {
@@ -278,20 +391,36 @@ export default function AuctionManagerFull({ isAdmin }) {
       groups[a.teamName].total += Number(a.auctionPrice || 0);
     });
     return groups;
-  }, [teams, assignments, players]);
+  }, [teams, assignments, getPlayer]);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white px-4 py-8">
+    <div className="min-h-screen bg-gray-900 px-0 py-4 text-white sm:px-4 sm:py-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        {!activeTournament && (
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 text-center">
+            <h1 className="text-xl font-bold text-yellow-300">Select a tournament to use the auction utility.</h1>
+          </div>
+        )}
+        {activeTournament && (
+          <div className="flex flex-col gap-4 rounded-lg border border-gray-700 bg-gray-800 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-400">{canManageAuction ? "Standalone auction utility" : "Read-only auction details"}</p>
+              <h1 className="safe-text text-xl font-bold text-yellow-300 sm:text-2xl">{activeTournament.name} • {activeTournament.year}</h1>
+            </div>
+            <Link to="/live-auction" className="inline-flex items-center justify-center gap-2 rounded-md bg-red-500 px-4 py-2 font-semibold text-white hover:bg-red-400">
+              <Radio size={17} /> Open Live Dashboard
+            </Link>
+          </div>
+        )}
         {/* Header + Form */}
-        {isAdmin && 
+        {canManageAuction && 
         <>
-            <div className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
-            <h1 className="text-2xl font-bold text-yellow-400 mb-4">Auction — Assign Players</h1>
+            <div className="bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-700 sm:p-6">
+            <h1 className="text-xl font-bold text-yellow-400 mb-4 sm:text-2xl">Auction — Assign Players</h1>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <select
-                className="bg-gray-700 px-3 py-2 rounded-md"
+                className="w-full rounded-md bg-gray-700 px-3 py-2"
                 value={selectedPlayer}
                 onChange={(e) => setSelectedPlayer(e.target.value)}
               >
@@ -304,7 +433,7 @@ export default function AuctionManagerFull({ isAdmin }) {
               </select>
 
               <select
-                className="bg-gray-700 px-3 py-2 rounded-md"
+                className="w-full rounded-md bg-gray-700 px-3 py-2"
                 value={selectedTeam}
                 onChange={(e) => setSelectedTeam(e.target.value)}
               >
@@ -319,7 +448,7 @@ export default function AuctionManagerFull({ isAdmin }) {
               <input
                 type="number"
                 min="0"
-                className="bg-gray-700 px-3 py-2 rounded-md"
+                className="w-full rounded-md bg-gray-700 px-3 py-2"
                 placeholder="Auction Price"
                 value={auctionPrice}
                 onChange={(e) => setAuctionPrice(e.target.value)}
@@ -327,11 +456,19 @@ export default function AuctionManagerFull({ isAdmin }) {
 
               <button
                 onClick={handleAssign}
-                className="bg-yellow-500 text-black font-semibold px-4 py-2 rounded-md hover:bg-yellow-400"
+                className="w-full rounded-md bg-yellow-500 px-4 py-2 font-semibold text-black hover:bg-yellow-400"
               >
                 Assign
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={handleMarkUnsold}
+              className="mt-3 w-full rounded-md border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 font-semibold text-cyan-100 hover:bg-cyan-400/20 md:w-auto"
+            >
+              Mark Selected Player Unsold
+            </button>
 
             {error && <p className="text-red-400 mt-2">{error}</p>}
             {info && <p className="text-green-300 mt-2">{info}</p>}
@@ -341,7 +478,7 @@ export default function AuctionManagerFull({ isAdmin }) {
         
 
         {/* Controls: search / filter / sort */}
-        {isAdmin && <>
+        {activeTournament && <>
             <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between w-full">
 
               {/* LEFT SECTION */}
@@ -410,7 +547,7 @@ export default function AuctionManagerFull({ isAdmin }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {Object.values(groupedByTeam).map((g) => {
             const t = g.team;
-            const purse = typeof t.purse === "number" ? t.purse : DEFAULT_PURSE;
+            const purse = getTeamPurse(t, DEFAULT_PURSE);
             const spent = g.total;
             const remaining = purse - spent;
 
@@ -425,8 +562,8 @@ export default function AuctionManagerFull({ isAdmin }) {
                       {t.teamName?.charAt(0) || "T"}
                     </div>
                   )}
-                  <div>
-                    <div className="text-yellow-300 font-bold">{t.teamName}</div>
+                  <div className="min-w-0">
+                    <div className="safe-text font-bold text-yellow-300">{t.teamName}</div>
                     <div className="text-sm text-gray-300">Players: {g.assignments.length}</div>
                   </div>
                 </div>
@@ -472,20 +609,20 @@ export default function AuctionManagerFull({ isAdmin }) {
                         <div
                           key={a.id}
                           className={`
-                            bg-gray-900 p-2 rounded-md flex items-center justify-between gap-3 
+                            bg-gray-900 p-2 rounded-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 
                             transform transition hover:-translate-y-1
                             ${index > 1 ? "opacity-0 group-hover:opacity-100 transition-opacity duration-500" : ""}
                           `}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-sm text-yellow-300 overflow-hidden">
                               {a.player?.name
                                 ? a.player.name.split(" ").map(n => n[0]).slice(0, 2).join("")
                                 : "P"}
                             </div>
 
-                            <div>
-                              <div className="text-sm font-medium">
+                            <div className="min-w-0">
+                              <div className="safe-text text-sm font-medium">
                                 {a.player?.name || "Unknown"}
                               </div>
                               <div className="text-xs text-gray-400">
@@ -494,8 +631,8 @@ export default function AuctionManagerFull({ isAdmin }) {
                             </div>
                           </div>
 
-                          {isAdmin && (
-                            <div className="flex items-center gap-2">
+                          {canManageAuction && (
+                            <div className="flex flex-wrap items-center gap-2">
                               <button
                                 onClick={() => openEdit(a)}
                                 className="text-blue-400 text-sm hover:underline"
@@ -526,14 +663,14 @@ export default function AuctionManagerFull({ isAdmin }) {
               <h3 className="text-lg font-bold text-yellow-400 mb-3">Assignments</h3>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="responsive-table text-left">
                   <thead>
                     <tr className="text-yellow-300 border-b border-gray-700">
                       <th className="py-2 px-2">Player</th>
                       <th className="py-2 px-2">Team</th>
                       <th className="py-2 px-2">Price</th>
                       <th className="py-2 px-2">Assigned At</th>
-                      { isAdmin && <th className="py-2 px-2">Actions</th> }
+                      { canManageAuction && <th className="py-2 px-2">Actions</th> }
                     </tr>
                   </thead>
                   <tbody>
@@ -545,7 +682,7 @@ export default function AuctionManagerFull({ isAdmin }) {
                         <td className="py-2 px-2 text-sm text-gray-400">
                           {a.createdAt?.toDate ? a.createdAt.toDate().toLocaleString() : "-"}
                         </td>
-                        { isAdmin && <td className="py-2 px-2 space-x-2">
+                        { canManageAuction && <td className="py-2 px-2 space-x-2">
                           <button onClick={() => openEdit(a)} className="text-blue-400 hover:underline text-sm">Edit</button>
                           <button onClick={() => handleRemove(a.id)} className="text-red-400 hover:underline text-sm">Remove</button>
                         </td> }
@@ -560,8 +697,8 @@ export default function AuctionManagerFull({ isAdmin }) {
 
         {/* Edit Modal (simple inline) */}
         {editingAssignment && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-3 sm:p-4">
+            <div className="w-full max-w-md rounded-xl border border-gray-700 bg-gray-800 p-4 sm:p-6">
               <h4 className="text-xl font-bold text-yellow-300 mb-2">Edit Auction Price</h4>
               <div className="text-sm text-gray-300 mb-4">
                 Player: <span className="font-medium">{getPlayer(editingAssignment.playerId).name}</span>
@@ -596,6 +733,16 @@ export default function AuctionManagerFull({ isAdmin }) {
             </div>
           </div>
         )}
+        <ConfirmModal
+          open={Boolean(confirmDialog)}
+          title={confirmDialog?.title}
+          message={confirmDialog?.message}
+          tone={confirmDialog?.tone}
+          confirmText={confirmDialog?.confirmText}
+          cancelText={confirmDialog?.cancelText}
+          onConfirm={confirmDialog?.onConfirm}
+          onCancel={confirmDialog?.onCancel}
+        />
       </div>
     </div>
   );
